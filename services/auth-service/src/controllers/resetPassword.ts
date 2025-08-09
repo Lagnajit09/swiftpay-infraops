@@ -49,11 +49,11 @@ export const requestPasswordReset = async (req: Request, res: Response) => {
         "https://api.emailjs.com/api/v1.0/email/send",
         {
           service_id: process.env.EMAILJS_SERVICE_ID,
-          template_id: process.env.EMAILJS_RESET_TEMPLATE_ID,
+          template_id: process.env.EMAILJS_PASSWORD_RESET_TEMPLATE_ID,
           user_id: process.env.EMAILJS_PUBLIC_ID,
           accessToken: process.env.EMAILJS_PRIVATE_ID,
           template_params: {
-            emailID: user.email,
+            email: user.email,
             name: user.name,
             reset_link: resetLink,
             from_name: "SwiftPay",
