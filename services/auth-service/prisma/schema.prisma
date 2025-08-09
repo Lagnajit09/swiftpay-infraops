@@ -1,0 +1,30 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// apps/auth-service/prisma/schema.prisma
+
+model User {
+  id                       Int       @id @default(autoincrement())
+  email                    String?   @unique
+  name                     String?
+  password                 String
+  number                   String    @unique
+  pin                      String? // If used for authentication (optional)
+  address                  String?
+  country                  String?
+  createdAt                DateTime  @default(now())
+  dob                      DateTime?
+  state                    String?
+  emailVerified            Boolean   @default(false)
+  verificationToken        String?   @unique
+  verificationTokenExpires DateTime?
+  resetToken               String?   @unique
+  resetTokenExpires        DateTime?
+}
