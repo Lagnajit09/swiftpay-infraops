@@ -6,6 +6,13 @@ import {
   requestPasswordReset,
   resetPassword,
 } from "../controllers/resetPassword";
+import {
+  validateRequest,
+  signupSchema,
+  emailVerificationSchema,
+  passwordResetRequestSchema,
+  passwordResetSchema,
+} from "../utils/validation";
 
 const router = express.Router();
 
@@ -42,13 +49,28 @@ const emailVerificationLimiter = rateLimit({
 });
 
 // Routes with validation and rate limiting
-router.post("/signup", signupLimiter, signup);
+router.post("/signup", signupLimiter, validateRequest(signupSchema), signup);
 
-router.get("/verify-email", emailVerificationLimiter, verifyEmail);
+router.get(
+  "/verify-email",
+  emailVerificationLimiter,
+  validateRequest(emailVerificationSchema),
+  verifyEmail
+);
 
-router.post("/request-reset", passwordResetLimiter, requestPasswordReset);
+router.post(
+  "/request-reset",
+  passwordResetLimiter,
+  validateRequest(passwordResetRequestSchema),
+  requestPasswordReset
+);
 
-router.post("/reset-password", passwordResetLimiter, resetPassword);
+router.post(
+  "/reset-password",
+  passwordResetLimiter,
+  validateRequest(passwordResetSchema),
+  resetPassword
+);
 
 // Health check endpoint for auth service
 router.get("/health", (req, res) => {
