@@ -70,6 +70,26 @@ app.get("/health", (req, res) => {
   res.status(200).json({ status: "healthy" });
 });
 
+// Global error handler
+app.use(
+  (
+    err: any,
+    req: express.Request,
+    res: express.Response,
+    next: express.NextFunction
+  ) => {
+    console.error("Global error:", err);
+
+    // Don't leak error details in production
+    const isDevelopment = process.env.NODE_ENV === "development";
+
+    res.status(err.status || 500).json({
+      message: "Internal server error",
+      ...(isDevelopment && { error: err.message, stack: err.stack }),
+    });
+  }
+);
+
 const PORT = process.env.PORT || 5001;
 const server = app.listen(PORT, () => {
   console.log(`🟢 Auth service running on port ${PORT}`);
