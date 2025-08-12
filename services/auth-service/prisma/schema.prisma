@@ -8,8 +8,6 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
-// apps/auth-service/prisma/schema.prisma
-
 model User {
   id                       Int       @id @default(autoincrement())
   email                    String?   @unique
@@ -23,9 +21,65 @@ model User {
   createdAt                DateTime  @default(now())
   dob                      DateTime?
   state                    String?
+  // Email Verification
   emailVerified            Boolean   @default(false)
   verificationToken        String?   @unique
   verificationTokenExpires DateTime?
+  // Password Reset Token
   resetToken               String?   @unique
   resetTokenExpires        DateTime?
+  // Security & Audit
+  lastLoginAt              DateTime?
+  failedLoginAttempts      Int       @default(0)
+  lockedUntil              DateTime?
+  passwordChangedAt        DateTime  @default(now())
+  isActive                 Boolean   @default(true)
+  role                     UserRole  @default(USER)
+  twoFactorEnabled         Boolean   @default(false)
+  twoFactorSecret          String?
+
+  @@map("users")
+}
+
+enum UserRole {
+  USER
+  ADMIN
+  MODERATOR
+}
+
+// Audit log for security events
+model SecurityLog {
+  id        String            @id @default(cuid())
+  userId    String?
+  email     String?
+  eventType SecurityEventType
+  ipAddress String?
+  userAgent String?
+  success   Boolean
+  metadata  Json?
+  createdAt DateTime          @default(now())
+
+  @@map("security_logs")
+}
+
+enum SecurityEventType {
+  LOGIN_ATTEMPT
+  PASSWORD_RESET_REQUEST
+  PASSWORD_RESET_SUCCESS
+  EMAIL_VERIFICATION
+  ACCOUNT_LOCKED
+  SUSPICIOUS_ACTIVITY
+}
+
+// Session management for future JWT tokens
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  ipAddress String?
+  userAgent String?
+
+  @@map("sessions")
 }
