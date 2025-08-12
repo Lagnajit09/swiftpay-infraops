@@ -1,25 +1,21 @@
-import { createClient, RedisClientType } from "redis";
+// src/lib/redis.ts
+import { createClient } from "redis";
 
-let client: RedisClientType | null = null;
+const redisUrl = process.env.REDIS_URL || "redis://localhost:6379";
 
-export async function getRedisClient(): Promise<RedisClientType> {
-  if (client && client.isOpen) return client;
+export const redisClient = createClient({
+  url: redisUrl,
+});
 
-  client = createClient({
-    url: process.env.REDIS_URL || "redis://localhost:6379",
-  });
+redisClient.on("error", (err) => {
+  console.error("❌ Redis Client Error:", err);
+});
 
-  client.on("error", (err) => {
-    console.error("❌ Redis client error:", err);
-  });
-
-  (async () => {
-    try {
-      await client.connect();
-      console.log("✅ Connected to Redis at", process.env.REDIS_URL);
-    } catch (err) {
-      console.error("❌ Failed to connect to Redis:", err);
-    }
-  })();
-  return client;
-}
+(async () => {
+  try {
+    await redisClient.connect();
+    console.log("✅ Connected to Redis at", redisUrl);
+  } catch (err) {
+    console.error("❌ Failed to connect to Redis:", err);
+  }
+})();

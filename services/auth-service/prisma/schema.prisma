@@ -16,7 +16,8 @@ model User {
   name                     String?
   password                 String
   number                   String    @unique
-  pin                      String? // If used for authentication (optional)
+  pin                      String?
+  walletID                 String?
   address                  String?
   country                  String?
   createdAt                DateTime  @default(now())
