@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import prisma from "../db";
+import prisma from "../lib/db";
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
 import axios from "axios";

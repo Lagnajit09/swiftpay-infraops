@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import prisma from "../db";
+import prisma from "../lib/db";
 
 export const verifyEmail = async (req: Request, res: Response) => {
   try {
