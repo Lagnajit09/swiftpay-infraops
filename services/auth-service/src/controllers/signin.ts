@@ -1,51 +1,109 @@
-// src/controllers/signin.ts
 import { Request, Response } from "express";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import prisma from "../lib/db";
 import { redisClient } from "../lib/redis";
+import { sanitizeInput } from "../utils/validation";
 
 export const signin = async (req: Request, res: Response) => {
-  const { email, password } = req.body;
-
   try {
-    // 1️⃣ Check if user exists
-    const user = await prisma.user.findUnique({ where: { email } });
-    if (!user) return res.status(400).json({ message: "Invalid credentials" });
+    const { email, password } = req.body;
 
-    // 2️⃣ Verify password
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch)
-      return res.status(400).json({ message: "Invalid credentials" });
+    // Sanitize email input
+    const sanitizedEmail = sanitizeInput.email(email);
 
-    // 3️⃣ Create JWT
+    //  Check if user exists and get user data
+    const user = await prisma.user.findUnique({
+      where: { email: sanitizedEmail },
+      select: {
+        id: true,
+        email: true,
+        password: true,
+        number: true,
+        walletID: true,
+      },
+    });
+
+    // Always check password even if user doesn't exist (timing attack prevention)
+    const dummyHash =
+      "$2b$10$000000000000000000000000000000000000000000000000000000";
+    const passwordToCheck = user?.password || dummyHash;
+    const isMatch = await bcrypt.compare(password, passwordToCheck);
+
+    // Generic error message to prevent user enumeration
+    if (!user || !isMatch) {
+      return res.status(401).json({
+        message: "Invalid credentials!",
+      });
+    }
+
+    // TODO:
+    //  Additional security checks
+    // if (user.emailVerified === false) {
+    //   return res.status(401).json({
+    //     message: "Please verify your email before signing in",
+    //   });
+    // }
+    // if (user.isActive === false) {
+    //   return res.status(401).json({
+    //     message: "Account has been deactivated",
+    //   });
+    // }
+
+    // Create JWT with proper payload
     const token = jwt.sign(
       {
         userId: user.id,
+        email: user.email,
         number: user.number,
-        walletBalance: user.walletID,
+        walletID: user.walletID,
       },
       process.env.JWT_SECRET!,
-      { expiresIn: "1h" }
+      {
+        expiresIn: "30d",
+        issuer: "swiftpay",
+      }
     );
 
-    // 4️⃣ Generate a random session ID
-    const sessionId = `sess:${crypto.randomUUID()}`;
+    //  Generate a cryptographically secure session ID
+    const sessionId = `auth:${crypto.randomUUID()}`;
 
-    // 5️⃣ Store in Redis with TTL
-    await redisClient.set(sessionId, token, { EX: 3600 });
+    //  Store in Redis with TTL (3600 seconds = 1 hour)
+    await redisClient.set(sessionId, token, { EX: 2592000 });
 
-    // 6️⃣ Send HTTP-only cookie
+    //  Set secure HTTP-only cookie
     res.cookie("sessionId", sessionId, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "strict",
-      maxAge: 3600 * 1000,
+      maxAge: 30 * 24 * 60 * 60 * 1000,
+      path: "/",
     });
 
-    res.json({ message: "Signed in successfully" });
+    // TODO:
+    // //  Update last login timestamp (optional)
+    // await prisma.user.update({
+    //   where: { id: user.id },
+    //   data: {
+    //     lastLoginAt: new Date(),
+    //     loginCount: { increment: 1 },
+    //   },
+    // });
+
+    // Success response with minimal user data
+    res.json({
+      message: "Signed in successfully.",
+      user: {
+        id: user.id,
+        email: user.email,
+        number: user.number,
+        walletID: user.walletID,
+      },
+    });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Internal server error" });
+    console.error("Signin error:", error);
+    res.status(500).json({
+      message: "An error occurred during signin. Please try again.",
+    });
   }
 };

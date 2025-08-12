@@ -9,22 +9,41 @@ import {
 import {
   validateRequest,
   signupSchema,
+  signinSchema,
   emailVerificationSchema,
   passwordResetRequestSchema,
   passwordResetSchema,
 } from "../utils/validation";
+import { signin } from "../controllers/signin";
 
 const router = express.Router();
 
 // Specific rate limiters for different operations
 const signupLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // 3 signup attempts per IP
+  max: 5, // 5 signup attempts per IP
   message: {
     error: "Too many signup attempts. Please try again in 15 minutes.",
   },
   standardHeaders: true,
   legacyHeaders: false,
+});
+
+// NEW: Signin rate limiter to prevent brute force attacks
+const signinLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // 5 signin attempts per IP
+  message: {
+    error: "Too many signin attempts. Please try again in 15 minutes.",
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  // Consider implementing per-email rate limiting for better security
+  keyGenerator: (req) => {
+    // Rate limit by IP + email for more granular control
+    const email = req.body?.email || "unknown";
+    return `${req.ip}-${email}`;
+  },
 });
 
 const passwordResetLimiter = rateLimit({
@@ -50,6 +69,8 @@ const emailVerificationLimiter = rateLimit({
 
 // Routes with validation and rate limiting
 router.post("/signup", signupLimiter, validateRequest(signupSchema), signup);
+// UPDATED: Added rate limiting and validation to signin
+router.post("/signin", signinLimiter, validateRequest(signinSchema), signin);
 
 router.get(
   "/verify-email",

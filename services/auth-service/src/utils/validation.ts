@@ -32,6 +32,12 @@ export const nameSchema = z
     "Name can only contain letters, spaces, hyphens, and apostrophes"
   );
 
+// NEW: Signin validation schema
+export const signinSchema = z.object({
+  email: emailSchema,
+  password: z.string().min(1, "Password is required"), // Less strict for signin
+});
+
 // Signup validation schema
 export const signupSchema = z.object({
   name: nameSchema,
