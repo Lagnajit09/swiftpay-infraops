@@ -5,6 +5,7 @@ import jwt from "jsonwebtoken";
 import prisma from "../lib/db";
 import { redisClient } from "../lib/redis";
 import { sanitizeInput } from "../utils/validation";
+import { logSecurityEvent } from "../utils/securityEventLogging";
 
 // Security constants
 const MAX_FAILED_ATTEMPTS = 5;
@@ -244,27 +245,5 @@ export const signin = async (req: Request, res: Response) => {
     res.status(500).json({
       message: "An error occurred during signin. Please try again.",
     });
-  }
-};
-
-// Security event logger
-const logSecurityEvent = async (data: {
-  userId?: string;
-  email?: string;
-  eventType: string;
-  success: boolean;
-  ipAddress?: string;
-  userAgent?: string;
-  metadata?: any;
-}) => {
-  try {
-    await prisma.securityLog.create({
-      data: {
-        ...data,
-        eventType: data.eventType as any,
-      },
-    });
-  } catch (error) {
-    console.error("Failed to log security event:", error);
   }
 };

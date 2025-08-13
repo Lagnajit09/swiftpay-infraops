@@ -3,25 +3,26 @@ import prisma from "../lib/db";
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
 import axios from "axios";
+import { logSecurityEvent } from "../utils/securityEventLogging";
 
 export const requestPasswordReset = async (req: Request, res: Response) => {
   try {
     const { email } = req.body;
-
-    if (!email || typeof email !== "string") {
-      return res.status(400).json({ message: "Valid email is required." });
-    }
-
-    // Email format validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      return res.status(400).json({ message: "Invalid email format." });
-    }
+    const ipAddress = req.ip || req.socket?.remoteAddress;
+    const userAgent = req.get("User-Agent");
 
     const user = await prisma.user.findUnique({ where: { email } });
 
     // Don't reveal if email exists or not (security best practice)
     if (!user) {
+      await logSecurityEvent({
+        email,
+        eventType: "PASSWORD_RESET_REQUEST",
+        success: false,
+        ipAddress,
+        userAgent,
+        metadata: { reason: "User not found" },
+      });
       return res.status(200).json({
         message:
           "If an account with this email exists, a password reset link has been sent.",
@@ -32,13 +33,22 @@ export const requestPasswordReset = async (req: Request, res: Response) => {
     const resetToken = crypto.randomBytes(32).toString("hex");
     const resetTokenExpires = new Date(Date.now() + 15 * 60 * 1000); // 15 min
 
-    // Store in DB using separate reset token fields
     await prisma.user.update({
       where: { id: user.id },
       data: {
-        resetToken, // Use separate field for reset tokens
+        resetToken,
         resetTokenExpires,
       },
+    });
+
+    // Log password reset request
+    await logSecurityEvent({
+      userId: user.id.toString(),
+      email: user.email,
+      eventType: "PASSWORD_RESET_REQUEST",
+      success: true,
+      ipAddress,
+      userAgent,
     });
 
     const resetLink = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
@@ -91,19 +101,11 @@ export const requestPasswordReset = async (req: Request, res: Response) => {
 
 export const resetPassword = async (req: Request, res: Response) => {
   try {
-    const { token, newPassword } = req.body;
+    const { token, currentPassword, newPassword } = req.body;
+    const ipAddress = req.ip || req.socket?.remoteAddress;
+    const userAgent = req.get("User-Agent");
 
-    if (!token || typeof token !== "string") {
-      return res.status(400).json({ message: "Valid token is required." });
-    }
-
-    if (!newPassword || typeof newPassword !== "string") {
-      return res
-        .status(400)
-        .json({ message: "Valid new password is required." });
-    }
-
-    // Find user with this reset token (using separate field)
+    // Find user with this reset token
     const user = await prisma.user.findFirst({
       where: {
         resetToken: token,
@@ -112,11 +114,20 @@ export const resetPassword = async (req: Request, res: Response) => {
     });
 
     if (!user) {
-      return res.status(400).json({ message: "Invalid or expired token." });
+      await logSecurityEvent({
+        eventType: "PASSWORD_RESET_SUCCESS",
+        success: false,
+        ipAddress,
+        userAgent,
+        metadata: { reason: "Invalid or expired token" },
+      });
+      return res
+        .status(400)
+        .json({ message: "Invalid or expired reset token" });
     }
 
     // Hash new password
-    const hashedPassword = await bcrypt.hash(newPassword, 12); // Increased rounds
+    const hashedPassword = await bcrypt.hash(newPassword, 12);
 
     // Update password and remove reset token
     await prisma.user.update({
@@ -125,10 +136,31 @@ export const resetPassword = async (req: Request, res: Response) => {
         password: hashedPassword,
         resetToken: null,
         resetTokenExpires: null,
+        passwordChangedAt: new Date(),
+        failedLoginAttempts: 0,
+        lockedUntil: null,
       },
     });
 
-    return res.status(200).json({ message: "Password successfully reset." });
+    // Invalidate all existing sessions for security
+    await prisma.session.deleteMany({
+      where: { userId: user.id.toString() },
+    });
+
+    // Log successful password reset
+    await logSecurityEvent({
+      userId: user.id.toString(),
+      email: user.email,
+      eventType: "PASSWORD_RESET_SUCCESS",
+      success: true,
+      ipAddress,
+      userAgent,
+    });
+
+    return res.status(200).json({
+      message:
+        "Password reset successful. Please login with your new password.",
+    });
   } catch (error) {
     console.error("Password reset error:", error);
     res.status(500).json({ message: "Internal server error." });

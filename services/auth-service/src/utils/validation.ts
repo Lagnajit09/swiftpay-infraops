@@ -11,7 +11,6 @@ export const passwordSchema = z
 
 // Email validation schema
 export const emailSchema = z
-  .string()
   .email("Invalid email format")
   .min(1, "Email is required");
 
