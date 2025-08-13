@@ -16,6 +16,7 @@ import {
   rateLimitConfig,
 } from "../utils/validation";
 import { signin } from "../controllers/signin";
+import { signout } from "../controllers/signout";
 
 const router = express.Router();
 
@@ -29,8 +30,8 @@ const generalLimiter = rateLimit(rateLimitConfig.general);
 
 // Routes with validation and rate limiting
 router.post("/signup", signupLimiter, validateRequest(signupSchema), signup);
-// UPDATED: Added rate limiting and validation to signin
 router.post("/signin", signinLimiter, validateRequest(signinSchema), signin);
+router.post("/signout", signout);
 
 router.get(
   "/verify-email",

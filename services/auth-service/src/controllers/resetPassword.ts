@@ -49,6 +49,9 @@ export const requestPasswordReset = async (req: Request, res: Response) => {
       success: true,
       ipAddress,
       userAgent,
+      metadata: {
+        reason: "password reset requested, request link sent.",
+      },
     });
 
     const resetLink = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
@@ -101,7 +104,7 @@ export const requestPasswordReset = async (req: Request, res: Response) => {
 
 export const resetPassword = async (req: Request, res: Response) => {
   try {
-    const { token, currentPassword, newPassword } = req.body;
+    const { token, newPassword } = req.body;
     const ipAddress = req.ip || req.socket?.remoteAddress;
     const userAgent = req.get("User-Agent");
 

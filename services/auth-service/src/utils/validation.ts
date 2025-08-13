@@ -1,4 +1,5 @@
-import { z } from "zod";
+import { string, z } from "zod";
+import { ipKeyGenerator } from "express-rate-limit";
 
 // Password validation schema
 export const passwordSchema = z
@@ -62,20 +63,10 @@ export const passwordResetRequestSchema = z.object({
 });
 
 // Change password schema
-export const passwordResetSchema = z
-  .object({
-    currentPassword: z.string().min(1, "Current password is required"),
-    newPassword: passwordSchema,
-    confirmNewPassword: z.string(),
-  })
-  .refine((data) => data.newPassword === data.confirmNewPassword, {
-    message: "New passwords don't match",
-    path: ["confirmNewPassword"],
-  })
-  .refine((data) => data.currentPassword !== data.newPassword, {
-    message: "New password must be different from current password",
-    path: ["newPassword"],
-  });
+export const passwordResetSchema = z.object({
+  newPassword: passwordSchema,
+  token: z.string(),
+});
 
 // PIN validation for payment operations
 export const pinSchema = z
@@ -257,7 +248,8 @@ export const rateLimitConfig = {
     standardHeaders: true,
     legacyHeaders: false,
     skipSuccessfulRequests: true,
-    keyGenerator: (req: any) => `${req.ip}-${req.body?.email || "unknown"}`,
+    keyGenerator: (req: any) =>
+      `${ipKeyGenerator(req.ip)}-${req.body?.email || "unknown"}`,
   },
 
   signup: {
@@ -274,7 +266,8 @@ export const rateLimitConfig = {
     message: "Too many password reset requests. Please try again in 1 hour.",
     standardHeaders: true,
     legacyHeaders: false,
-    keyGenerator: (req: any) => `${req.ip}-${req.body?.email || "unknown"}`,
+    keyGenerator: (req: any) =>
+      `${ipKeyGenerator(req.ip)}-${req.body?.email || "unknown"}`,
   },
 
   emailVerification: {
@@ -292,7 +285,8 @@ export const rateLimitConfig = {
     message: "Too many PIN attempts. Please try again in 15 minutes.",
     standardHeaders: true,
     legacyHeaders: false,
-    keyGenerator: (req: any) => `${req.ip}-${req.user?.id || "unknown"}`,
+    keyGenerator: (req: any) =>
+      `${ipKeyGenerator(req.ip)}-${req.user?.id || "unknown"}`,
   },
 
   // Moderate for general API

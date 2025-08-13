@@ -3,7 +3,7 @@ import dotenv from "dotenv";
 import authRoutes from "./routes/auth";
 import cors from "cors";
 import helmet from "helmet";
-import rateLimit from "express-rate-limit";
+import cookieParser from "cookie-parser";
 
 dotenv.config();
 
@@ -50,6 +50,8 @@ const corsOptions = {
   allowedHeaders: ["Content-Type", "Authorization"],
 };
 app.use(cors(corsOptions));
+
+app.use(cookieParser());
 
 app.use(express.json());
 
