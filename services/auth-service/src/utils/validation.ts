@@ -15,10 +15,13 @@ export const emailSchema = z
   .email("Invalid email format")
   .min(1, "Email is required");
 
-// Phone number validation schema (adjust pattern as needed for your region)
+// Phone number validation schema
 export const phoneSchema = z
   .string()
-  .regex(/^\+?[1-9]\d{1,14}$/, "Invalid phone number format")
+  .regex(
+    /^\+[1-9]\d{1,14}$/,
+    "Invalid phone number format (must include country code)"
+  )
   .min(10, "Phone number must be at least 10 digits")
   .max(15, "Phone number cannot exceed 15 digits");
 
@@ -59,13 +62,113 @@ export const passwordResetRequestSchema = z.object({
   email: emailSchema,
 });
 
-// Password reset schema
-export const passwordResetSchema = z.object({
-  token: z
+// Change password schema
+export const passwordResetSchema = z
+  .object({
+    currentPassword: z.string().min(1, "Current password is required"),
+    newPassword: passwordSchema,
+    confirmNewPassword: z.string(),
+  })
+  .refine((data) => data.newPassword === data.confirmNewPassword, {
+    message: "New passwords don't match",
+    path: ["confirmNewPassword"],
+  })
+  .refine((data) => data.currentPassword !== data.newPassword, {
+    message: "New password must be different from current password",
+    path: ["newPassword"],
+  });
+
+// PIN validation for payment operations
+export const pinSchema = z
+  .string()
+  .length(6, "PIN must be exactly 6 digits")
+  .regex(/^\d{6}$/, "PIN must contain only numbers")
+  .refine((pin) => {
+    // Check for weak PINs
+    const weakPins = [
+      "123456",
+      "000000",
+      "111111",
+      "222222",
+      "333333",
+      "444444",
+      "555555",
+      "666666",
+      "777777",
+      "888888",
+      "999999",
+    ];
+    return !weakPins.includes(pin);
+  }, "PIN is too weak")
+  .refine((pin) => {
+    // Check for sequential numbers
+    const digits = pin.split("").map(Number);
+    for (let i = 0; i < digits.length - 2; i++) {
+      if (
+        digits[i] + 1 === digits[i + 1] &&
+        digits[i + 1] + 1 === digits[i + 2]
+      ) {
+        return false;
+      }
+      if (
+        digits[i] - 1 === digits[i + 1] &&
+        digits[i + 1] - 1 === digits[i + 2]
+      ) {
+        return false;
+      }
+    }
+    return true;
+  }, "PIN cannot contain sequential numbers");
+
+// Date of birth validation
+export const dobSchema = z
+  .string()
+  .or(z.date())
+  .refine((date) => {
+    const dobDate = new Date(date);
+    const today = new Date();
+    const age = today.getFullYear() - dobDate.getFullYear();
+    return age >= 18 && age <= 120;
+  }, "You must be between 18 and 120 years old");
+
+// Address validation
+export const addressSchema = z
+  .string()
+  .min(10, "Address must be at least 10 characters")
+  .max(200, "Address cannot exceed 200 characters")
+  .regex(/^[a-zA-Z0-9\s,.-]+$/, "Address contains invalid characters");
+
+// Session management
+export const sessionSchema = z.object({
+  sessionId: z.string().min(1, "Session ID is required"),
+});
+
+// Security log query schema
+export const securityLogQuerySchema = z.object({
+  page: z.string().regex(/^\d+$/).transform(Number).default(1),
+  limit: z.string().regex(/^\d+$/).transform(Number).default(10),
+  eventType: z
+    .enum([
+      "LOGIN_ATTEMPT",
+      "PASSWORD_RESET_REQUEST",
+      "PASSWORD_RESET_SUCCESS",
+      "EMAIL_VERIFICATION",
+      "ACCOUNT_LOCKED",
+      "SUSPICIOUS_ACTIVITY",
+    ])
+    .optional(),
+  dateFrom: z.string().datetime().optional(),
+  dateTo: z.string().datetime().optional(),
+});
+
+// Account verification schema for admin operations
+export const accountVerificationSchema = z.object({
+  userId: z
     .string()
-    .min(1, "Token is required")
-    .regex(/^[a-f0-9]{64}$/, "Invalid token format"),
-  newPassword: passwordSchema,
+    .or(z.number())
+    .transform((val) => Number(val)),
+  verificationStatus: z.enum(["pending", "verified", "rejected"]),
+  notes: z.string().max(500, "Notes cannot exceed 500 characters").optional(),
 });
 
 // Validation middleware helper
@@ -101,54 +204,47 @@ export const validateRequest = (schema: z.ZodSchema) => {
 
 // Sanitization helpers
 export const sanitizeInput = {
-  // Remove HTML tags and dangerous characters
+  // Remove HTML tags, scripts, and dangerous characters
   html: (input: string): string => {
     return input
-      .replace(/<[^>]*>/g, "") // Remove HTML tags
-      .replace(/[<>\"']/g, "") // Remove dangerous characters
+      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "") // Remove script tags
+      .replace(/<[^>]*>/g, "") // Remove other HTML tags
+      .replace(/[<>\"'&]/g, "") // Remove dangerous characters
+      .replace(/javascript:/gi, "") // Remove javascript: protocols
+      .replace(/on\w+\s*=/gi, "") // Remove event handlers
       .trim();
   },
 
-  // Normalize email
+  // Email sanitization
   email: (email: string): string => {
-    return email.toLowerCase().trim();
+    return email
+      .toLowerCase()
+      .trim()
+      .replace(/[^\w@.-]/g, "") // Keep only word chars, @, ., and -
+      .slice(0, 254); // Limit length
   },
 
-  // Normalize phone number
+  // Phone sanitization
   phone: (phone: string): string => {
-    return phone.replace(/\D/g, ""); // Keep only digits
+    // Keep only digits and + for country code
+    return phone.replace(/[^\d+]/g, "").slice(0, 15);
   },
 
-  // Normalize name
+  // Name sanitization
   name: (name: string): string => {
     return name
       .trim()
       .replace(/\s+/g, " ") // Replace multiple spaces with single space
-      .replace(/[^a-zA-Z\s'-]/g, ""); // Keep only allowed characters
-  },
-};
-
-// Rate limiting helpers
-export const rateLimitConfig = {
-  // Strict limits for sensitive operations
-  auth: {
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 5, // 5 attempts
-    message:
-      "Too many authentication attempts. Please try again in 15 minutes.",
+      .replace(/[^a-zA-Z\s'-]/g, "") // Keep only letters, spaces, hyphens, apostrophes
+      .slice(0, 50); // Limit length
   },
 
-  // Moderate limits for password reset
-  passwordReset: {
-    windowMs: 60 * 60 * 1000, // 1 hour
-    max: 3, // 3 attempts
-    message: "Too many password reset requests. Please try again in 1 hour.",
-  },
-
-  // General API limits
-  general: {
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100, // 100 requests
-    message: "Too many requests. Please try again later.",
+  // General text sanitization
+  text: (text: string): string => {
+    return text
+      .trim()
+      .replace(/[<>\"'&]/g, "")
+      .replace(/javascript:/gi, "")
+      .replace(/on\w+\s*=/gi, "");
   },
 };

@@ -10,8 +10,8 @@ datasource db {
 
 model User {
   id                       Int       @id @default(autoincrement())
-  email                    String?   @unique
-  name                     String?
+  email                    String    @unique
+  name                     String
   password                 String
   number                   String    @unique
   pin                      String?
@@ -75,6 +75,7 @@ enum SecurityEventType {
 model Session {
   id        String   @id @default(cuid())
   userId    String
+  sessionID String   @unique
   token     String   @unique
   expiresAt DateTime
   createdAt DateTime @default(now())

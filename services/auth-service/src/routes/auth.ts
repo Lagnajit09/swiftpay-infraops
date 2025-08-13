@@ -20,7 +20,7 @@ const router = express.Router();
 
 // Specific rate limiters for different operations
 const signupLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
+  windowMs: 60 * 60 * 1000, // 1 hour
   max: 5, // 5 signup attempts per IP
   message: {
     error: "Too many signup attempts. Please try again in 15 minutes.",
@@ -29,21 +29,15 @@ const signupLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-// NEW: Signin rate limiter to prevent brute force attacks
+// Signin rate limiter to prevent brute force attacks
 const signinLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // 5 signin attempts per IP
-  message: {
-    error: "Too many signin attempts. Please try again in 15 minutes.",
-  },
+  max: 3,
+  message: "Too many login attempts. Please try again in 15 minutes.",
   standardHeaders: true,
   legacyHeaders: false,
-  // Consider implementing per-email rate limiting for better security
-  keyGenerator: (req) => {
-    // Rate limit by IP + email for more granular control
-    const email = req.body?.email || "unknown";
-    return `${req.ip}-${email}`;
-  },
+  skipSuccessfulRequests: true,
+  keyGenerator: (req: any) => `${req.ip}-${req.body?.email || "unknown"}`,
 });
 
 const passwordResetLimiter = rateLimit({
@@ -54,17 +48,27 @@ const passwordResetLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
+  keyGenerator: (req: any) => `${req.ip}-${req.body?.email || "unknown"}`,
 });
 
 const emailVerificationLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10, // 10 verification attempts per IP
+  max: 5, // 5 verification attempts per IP
   message: {
     error:
       "Too many email verification attempts. Please try again in 15 minutes.",
   },
   standardHeaders: true,
   legacyHeaders: false,
+});
+
+const PinOperationsLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 3,
+  message: "Too many PIN attempts. Please try again in 15 minutes.",
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req: any) => `${req.ip}-${req.user?.id || "unknown"}`,
 });
 
 // Routes with validation and rate limiting
