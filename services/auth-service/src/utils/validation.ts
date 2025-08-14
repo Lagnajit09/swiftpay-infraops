@@ -68,47 +68,21 @@ export const passwordResetSchema = z.object({
   token: z.string(),
 });
 
-// PIN validation for payment operations
-export const pinSchema = z
-  .string()
-  .length(6, "PIN must be exactly 6 digits")
-  .regex(/^\d{6}$/, "PIN must contain only numbers")
-  .refine((pin) => {
-    // Check for weak PINs
-    const weakPins = [
-      "123456",
-      "000000",
-      "111111",
-      "222222",
-      "333333",
-      "444444",
-      "555555",
-      "666666",
-      "777777",
-      "888888",
-      "999999",
-    ];
-    return !weakPins.includes(pin);
-  }, "PIN is too weak")
-  .refine((pin) => {
-    // Check for sequential numbers
-    const digits = pin.split("").map(Number);
-    for (let i = 0; i < digits.length - 2; i++) {
-      if (
-        digits[i] + 1 === digits[i + 1] &&
-        digits[i + 1] + 1 === digits[i + 2]
-      ) {
-        return false;
-      }
-      if (
-        digits[i] - 1 === digits[i + 1] &&
-        digits[i + 1] - 1 === digits[i + 2]
-      ) {
-        return false;
-      }
-    }
-    return true;
-  }, "PIN cannot contain sequential numbers");
+// Change password schema
+export const changePasswordSchema = z
+  .object({
+    currentPassword: z.string().min(1, "Current password is required"),
+    newPassword: passwordSchema,
+    confirmNewPassword: z.string(),
+  })
+  .refine((data) => data.newPassword === data.confirmNewPassword, {
+    message: "New passwords don't match",
+    path: ["confirmNewPassword"],
+  })
+  .refine((data) => data.currentPassword !== data.newPassword, {
+    message: "New password must be different from current password",
+    path: ["newPassword"],
+  });
 
 // Date of birth validation
 export const dobSchema = z
@@ -277,16 +251,6 @@ export const rateLimitConfig = {
       "Too many email verification attempts. Please try again in 15 minutes.",
     standardHeaders: true,
     legacyHeaders: false,
-  },
-
-  pinOperations: {
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 3,
-    message: "Too many PIN attempts. Please try again in 15 minutes.",
-    standardHeaders: true,
-    legacyHeaders: false,
-    keyGenerator: (req: any) =>
-      `${ipKeyGenerator(req.ip)}-${req.user?.id || "unknown"}`,
   },
 
   // Moderate for general API

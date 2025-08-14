@@ -15,7 +15,7 @@ const SUSPICIOUS_THRESHOLD = 3; // Failed attempts before logging as suspicious
 export const signin = async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body;
-    const ipAddress = req.ip || req.connection.remoteAddress;
+    const ipAddress = req.ip || req.socket?.remoteAddress;
     const userAgent = req.get("User-Agent");
 
     // Sanitize email input
