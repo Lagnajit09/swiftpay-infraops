@@ -34,6 +34,7 @@ model User {
   lockedUntil              DateTime?
   passwordChangedAt        DateTime  @default(now())
   isActive                 Boolean   @default(true)
+  isDeleted                Boolean   @default(false)
   role                     UserRole  @default(USER)
   twoFactorEnabled         Boolean   @default(false)
   twoFactorSecret          String?
@@ -64,14 +65,30 @@ model SecurityLog {
 
 enum SecurityEventType {
   LOGIN_ATTEMPT
+  LOGIN_SUCCESS
+  LOGIN_FAILURE
+
   PASSWORD_RESET_REQUEST
   PASSWORD_RESET_SUCCESS
+  PASSWORD_RESET_FAILURE
+
+  PASSWORD_CHANGE_REQUEST
+  PASSWORD_CHANGE_SUCCESS
+  PASSWORD_CHANGE_FAILURE
+
   EMAIL_VERIFICATION
+  EMAIL_VERIFICATION_SUCCESS
+  EMAIL_VERIFICATION_FAILURE
+
   ACCOUNT_LOCKED
   SUSPICIOUS_ACTIVITY
+
   ACCOUNT_DEACTIVATION
+  ACCOUNT_DELETION
+
   LOGOUT_ATTEMPT
-  PIN_UPDATE
+  LOGOUT_SUCCESS
+  LOGOUT_FAILURE
 }
 
 // Session management for future JWT tokens
