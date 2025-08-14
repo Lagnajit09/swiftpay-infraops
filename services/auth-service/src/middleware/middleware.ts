@@ -4,6 +4,61 @@ import jwt from "jsonwebtoken";
 import { detectSuspiciousActivity } from "../controllers/security";
 import { redisClient } from "../lib/redis";
 
+// Middleware to check if the user is already signed-in
+export const checkExistingSession = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const sessionId = req.cookies?.sessionId;
+    if (!sessionId) {
+      // No session cookie, continue to next middleware/handler
+      return next();
+    }
+
+    // Retrieve token from Redis using session ID
+    const token = await redisClient.get(sessionId);
+    if (!token) {
+      // No token in Redis, session invalid or expired
+      return next();
+    }
+
+    // Verify JWT token
+    let decoded: any;
+    try {
+      decoded = jwt.verify(token, process.env.JWT_SECRET!);
+    } catch (error) {
+      // Invalid token; treat as no valid session
+      return next();
+    }
+
+    // Check session record in database and its expiry
+    const sessionRecord = await prisma.session.findUnique({
+      where: { sessionID: sessionId },
+    });
+
+    if (!sessionRecord || sessionRecord.expiresAt <= new Date()) {
+      // Session expired or missing
+      return next();
+    }
+
+    // Session is valid; user is already signed in
+    return res.status(200).json({
+      message: "Already signed in",
+      user: {
+        id: decoded.userId,
+        email: decoded.email,
+        role: decoded.role,
+      },
+    });
+  } catch (error) {
+    console.error("Error in checkExistingSession middleware:", error);
+    // On error, fallback to next to avoid blocking the sign-in flow
+    return next();
+  }
+};
+
 // Middleware to detect and block suspicious IPs
 export const suspiciousIPDetection = async (
   req: Request,

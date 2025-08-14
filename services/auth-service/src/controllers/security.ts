@@ -103,6 +103,8 @@ export const getSecurityMetrics = async (req: Request, res: Response) => {
     const last24Hours = new Date(Date.now() - 24 * 60 * 60 * 1000);
     const last7Days = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
+    console.log(req.cookies.sessionId);
+
     const metrics = await Promise.all([
       // Login attempts in last 24 hours
       prisma.securityLog.count({
@@ -176,8 +178,15 @@ export const getSecurityMetrics = async (req: Request, res: Response) => {
 
 export const getSecurityLogs = async (req: Request, res: Response) => {
   try {
-    const { page, limit, eventType, dateFrom, dateTo } = req.body;
-    const skip = (page - 1) * limit;
+    const { page = 1, limit = 10, eventType, dateFrom, dateTo } = req.body;
+
+    // Ensure page and limit are valid numbers
+    const validPage = Math.max(1, parseInt(page?.toString()) || 1);
+    const validLimit = Math.max(
+      1,
+      Math.min(100, parseInt(limit?.toString()) || 10)
+    ); // Cap at 100
+    const skip = (validPage - 1) * validLimit;
 
     const whereClause: any = {};
 
@@ -195,7 +204,7 @@ export const getSecurityLogs = async (req: Request, res: Response) => {
       prisma.securityLog.findMany({
         where: whereClause,
         skip,
-        take: limit,
+        take: validLimit,
         orderBy: { createdAt: "desc" },
         select: {
           id: true,
@@ -215,10 +224,10 @@ export const getSecurityLogs = async (req: Request, res: Response) => {
     res.json({
       logs,
       pagination: {
-        page,
-        limit,
+        page: validPage,
+        limit: validLimit,
         totalCount,
-        totalPages: Math.ceil(totalCount / limit),
+        totalPages: Math.ceil(totalCount / validLimit),
       },
     });
   } catch (error) {

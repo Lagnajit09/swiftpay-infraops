@@ -3,6 +3,7 @@ import rateLimit from "express-rate-limit";
 import { signup } from "../controllers/signup";
 import { verifyEmail } from "../controllers/emailVerification";
 import {
+  changePassword,
   requestPasswordReset,
   resetPassword,
 } from "../controllers/resetPassword";
@@ -15,21 +16,15 @@ import {
   passwordResetSchema,
   rateLimitConfig,
   changePasswordSchema,
-  securityLogQuerySchema,
   sessionSchema,
 } from "../utils/validation";
 import { signin } from "../controllers/signin";
 import { signout } from "../controllers/signout";
+import { getSecurityInfo } from "../controllers/security";
 import {
-  getSecurityInfo,
-  getSecurityLogs,
-  getSecurityMetrics,
-} from "../controllers/security";
-import {
+  checkExistingSession,
   suspiciousIPDetection,
   verifyTokenWithSession,
-  requireEmailVerification,
-  requireAdminRole,
 } from "../middleware/middleware";
 import { getActiveSessions, revokeSession } from "../controllers/session";
 
@@ -71,6 +66,7 @@ router.post(
   suspiciousIPDetection,
   signinLimiter,
   validateRequest(signinSchema),
+  checkExistingSession,
   signin
 );
 
@@ -103,7 +99,8 @@ router.use(verifyTokenWithSession);
 router.post(
   "/change-password",
   generalLimiter,
-  validateRequest(changePasswordSchema)
+  validateRequest(changePasswordSchema),
+  changePassword
 );
 
 router.post("/signout", generalLimiter, signout);
@@ -120,24 +117,6 @@ router.delete(
   generalLimiter,
   validateRequest(sessionSchema),
   revokeSession
-);
-
-// Admins Routes
-// Get security metrics (admin only)
-router.get(
-  "/admin/security-metrics",
-  generalLimiter,
-  requireAdminRole,
-  getSecurityMetrics
-);
-
-// Get security logs (admin only)
-router.get(
-  "/admin/security-logs",
-  generalLimiter,
-  requireAdminRole,
-  validateRequest(securityLogQuerySchema),
-  getSecurityLogs
 );
 
 // Health check endpoint for auth service

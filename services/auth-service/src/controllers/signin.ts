@@ -148,7 +148,7 @@ export const signin = async (req: Request, res: Response) => {
       await logSecurityEvent({
         userId: user.id.toString(),
         email: user.email,
-        eventType: "LOGIN_ATTEMPT",
+        eventType: "LOGIN_FAILURE",
         success: false,
         ipAddress,
         userAgent,
@@ -222,7 +222,7 @@ export const signin = async (req: Request, res: Response) => {
     await logSecurityEvent({
       userId: user.id.toString(),
       email: user.email,
-      eventType: "LOGIN_ATTEMPT",
+      eventType: "LOGIN_SUCCESS",
       success: true,
       ipAddress,
       userAgent,

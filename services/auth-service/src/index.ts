@@ -1,6 +1,7 @@
 import express from "express";
 import dotenv from "dotenv";
 import authRoutes from "./routes/auth";
+import adminRoutes from "./routes/admin";
 import cors from "cors";
 import helmet from "helmet";
 import cookieParser from "cookie-parser";
@@ -55,6 +56,7 @@ app.use(cookieParser());
 
 app.use(express.json());
 
+authRoutes.use("/admin", adminRoutes);
 app.use("/api/auth", authRoutes);
 
 // Health check endpoint
