@@ -14,7 +14,6 @@ model User {
   name                     String
   password                 String
   number                   String    @unique
-  pin                      String?
   walletID                 String?
   address                  String?
   country                  String?
@@ -60,6 +59,8 @@ model SecurityLog {
   metadata  Json?
   createdAt DateTime          @default(now())
 
+  @@index([eventType])
+  @@index([userId, eventType])
   @@map("security_logs")
 }
 
@@ -98,9 +99,12 @@ model Session {
   sessionID String   @unique
   token     String   @unique
   expiresAt DateTime
+  isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   ipAddress String?
   userAgent String?
 
+  @@index([userId, isActive])
+  @@index([expiresAt])
   @@map("sessions")
 }
