@@ -1,9 +1,22 @@
 import express from "express";
+import { getUserProfile, updateEmail } from "../controllers/userAction";
+import {
+  emailUpdateSchema,
+  sessionVerificationSchema,
+  validateRequest,
+} from "../utils/validation";
+import { verifyTokenWithSession } from "../middleware/authMiddleware";
 const router = express.Router();
 
+router.use(verifyTokenWithSession);
+
+// User Profile Operations
+router.get("/me", validateRequest(sessionVerificationSchema), getUserProfile);
+
+// Account Update Operations
+router.patch("/update-email", validateRequest(emailUpdateSchema), updateEmail);
+
 // TODO:
-router.get("/me", () => {});
-router.patch("/update-email", () => {});
 router.patch("/update-phone", () => {});
 router.patch("/change-password", () => {});
 router.patch("/deactivate", () => {});

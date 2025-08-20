@@ -25,7 +25,7 @@ import {
   checkExistingSession,
   suspiciousIPDetection,
   verifyTokenWithSession,
-} from "../middleware/middleware";
+} from "../middleware/authMiddleware";
 import { getActiveSessions, revokeSession } from "../controllers/session";
 
 const router = express.Router();

@@ -37,16 +37,20 @@ export const nameSchema = z
 
 // NEW: Signin validation schema
 export const signinSchema = z.object({
-  email: emailSchema,
-  password: z.string().min(1, "Password is required"), // Less strict for signin
+  body: z.object({
+    email: emailSchema,
+    password: z.string().min(1, "Password is required"),
+  }),
 });
 
 // Signup validation schema
 export const signupSchema = z.object({
-  name: nameSchema,
-  email: emailSchema,
-  password: passwordSchema,
-  number: phoneSchema,
+  body: z.object({
+    name: nameSchema,
+    email: emailSchema,
+    password: passwordSchema,
+    number: phoneSchema,
+  }),
 });
 
 // Email verification schema
@@ -59,27 +63,33 @@ export const emailVerificationSchema = z.object({
 
 // Password reset request schema
 export const passwordResetRequestSchema = z.object({
-  email: emailSchema,
+  body: z.object({
+    email: emailSchema,
+  }),
 });
 
 // Change password schema
 export const passwordResetSchema = z.object({
-  newPassword: passwordSchema,
-  token: z.string(),
+  body: z.object({
+    newPassword: passwordSchema,
+    token: z.string(),
+  }),
 });
 
 // Change password schema
 export const changePasswordSchema = z
   .object({
-    currentPassword: z.string().min(1, "Current password is required"),
-    newPassword: passwordSchema,
-    confirmNewPassword: z.string(),
+    body: z.object({
+      currentPassword: z.string().min(1, "Current password is required"),
+      newPassword: passwordSchema,
+      confirmNewPassword: z.string(),
+    }),
   })
-  .refine((data) => data.newPassword === data.confirmNewPassword, {
+  .refine((data) => data.body.newPassword === data.body.confirmNewPassword, {
     message: "New passwords don't match",
     path: ["confirmNewPassword"],
   })
-  .refine((data) => data.currentPassword !== data.newPassword, {
+  .refine((data) => data.body.currentPassword !== data.body.newPassword, {
     message: "New password must be different from current password",
     path: ["newPassword"],
   });
@@ -135,12 +145,49 @@ export const accountVerificationSchema = z.object({
   notes: z.string().max(500, "Notes cannot exceed 500 characters").optional(),
 });
 
+// --------------------------------- USER ACTION ROUTES SCHEMAS ----------------------------------
+// Email update schema
+export const emailUpdateSchema = z.object({
+  body: z.object({
+    userId: z
+      .string()
+      .or(z.number())
+      .transform((val) => Number(val)),
+    newEmail: emailSchema,
+    oldEmail: emailSchema.optional(),
+    verificationToken: z.string().optional(),
+  }),
+  headers: z
+    .object({
+      "x-service-id": z.string().min(1, "Service ID is required"),
+      "x-api-key": z.string().min(1, "Service Api Key is required"),
+    })
+    .catchall(z.unknown()),
+});
+
+// Session verification schema
+export const sessionVerificationSchema = z.object({
+  headers: z
+    .object({
+      "x-service-id": z.string().min(1, "Service ID is required"),
+      "x-api-key": z.string().min(1, "Service Api Key is required"),
+    })
+    .catchall(z.unknown()),
+});
+
+// ---------------------------------- VALIDATION FUNCTION -------------------------------------
+
 // Validation middleware helper
 export const validateRequest = (schema: z.ZodSchema) => {
   return (req: any, res: any, next: any) => {
     try {
-      // For GET requests, validate query params, for others validate body
-      const dataToValidate = req.method === "GET" ? req.query : req.body;
+      // Assemble all data for validation
+      const dataToValidate = {
+        headers: req.headers,
+        body: req.body,
+        params: req.params,
+        query: req.query,
+      };
 
       const result = schema.safeParse(dataToValidate);
 
@@ -156,7 +203,6 @@ export const validateRequest = (schema: z.ZodSchema) => {
         });
       }
 
-      // Add validated data to request object
       req.validatedData = result.data;
       next();
     } catch (error) {

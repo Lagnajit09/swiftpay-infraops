@@ -8,7 +8,7 @@ import {
 import {
   requireAdminRole,
   verifyTokenWithSession,
-} from "../middleware/middleware";
+} from "../middleware/authMiddleware";
 import { getSecurityLogs, getSecurityMetrics } from "../controllers/security";
 
 const generalLimiter = rateLimit(rateLimitConfig.general);
