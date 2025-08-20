@@ -212,7 +212,7 @@ export const validateRequest = (schema: z.ZodSchema) => {
   };
 };
 
-// Sanitization helpers
+// ----------------------------------- SANITIZATION HELPERS -----------------------------------
 export const sanitizeInput = {
   // Remove HTML tags, scripts, and dangerous characters
   html: (input: string): string => {
@@ -259,7 +259,7 @@ export const sanitizeInput = {
   },
 };
 
-// Rate limiting configurations
+// ---------------------------- RATE LIMITING CONFIGURATIONS ---------------------------
 export const rateLimitConfig = {
   signin: {
     windowMs: 15 * 60 * 1000, // 15 minutes
@@ -306,5 +306,20 @@ export const rateLimitConfig = {
     message: "Too many requests. Please try again later.",
     standardHeaders: true,
     legacyHeaders: false,
+  },
+
+  internalService: {
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 1000, // Higher limit for internal services
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: {
+      error: "Too many requests from this service",
+      retryAfter: "15 minutes",
+    },
+    skip: (req: any) => {
+      // Skip rate limiting for health checks
+      return req.path === "/health";
+    },
   },
 };

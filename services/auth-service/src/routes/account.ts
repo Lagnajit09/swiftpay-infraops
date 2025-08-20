@@ -2,12 +2,19 @@ import express from "express";
 import { getUserProfile, updateEmail } from "../controllers/userAction";
 import {
   emailUpdateSchema,
+  rateLimitConfig,
   sessionVerificationSchema,
   validateRequest,
 } from "../utils/validation";
 import { verifyTokenWithSession } from "../middleware/authMiddleware";
+import rateLimit from "express-rate-limit";
+
 const router = express.Router();
 
+// Rate limiter for internal service calls
+const internalServiceLimiter = rateLimit(rateLimitConfig.internalService);
+
+router.use(internalServiceLimiter);
 router.use(verifyTokenWithSession);
 
 // User Profile Operations
