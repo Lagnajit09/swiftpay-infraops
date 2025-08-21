@@ -8,6 +8,7 @@ import {
 } from "../utils/validation";
 import { verifyTokenWithSession } from "../middleware/authMiddleware";
 import rateLimit from "express-rate-limit";
+import { serviceAuthMiddleware } from "../middleware/serviceAuthMiddleware";
 
 const router = express.Router();
 
@@ -15,6 +16,7 @@ const router = express.Router();
 const internalServiceLimiter = rateLimit(rateLimitConfig.internalService);
 
 router.use(internalServiceLimiter);
+router.use(serviceAuthMiddleware);
 router.use(verifyTokenWithSession);
 
 // User Profile Operations

@@ -55,30 +55,8 @@ export const getUserProfile = async (req: Request, res: Response) => {
 export const updateEmail = async (req: Request, res: Response) => {
   try {
     const { userId, newEmail, verificationToken } = req.body;
-    const serviceId = req.headers["x-service-id"];
-    const serviceApiKey = req.headers["x-api-key"];
 
     const sanitizedEmail = sanitizeInput.email(newEmail);
-
-    // Ensure headers are strings and not arrays
-    if (Array.isArray(serviceId) || Array.isArray(serviceApiKey)) {
-      return res.status(400).json({ message: "Invalid header format" });
-    }
-
-    if (!serviceId || !serviceApiKey) {
-      return res.status(400).json({ message: "Missing service ID or API key" });
-    }
-
-    if (!ALLOWED_SERVICES.includes(serviceId)) {
-      return res.status(403).json({ message: "Forbidden: Unknown service ID" });
-    }
-
-    // Type assertion since we've already validated serviceId is in ALLOWED_SERVICES
-    if (
-      SERVICE_KEYS[serviceId as keyof typeof SERVICE_KEYS] !== serviceApiKey
-    ) {
-      return res.status(401).json({ message: "Unauthorized: Invalid API key" });
-    }
 
     // Check if email already exists
     const existingUser = await prisma.user.findUnique({
@@ -117,7 +95,6 @@ export const updateEmail = async (req: Request, res: Response) => {
       metadata: {
         oldEmail: req.body.oldEmail,
         newEmail: sanitizedEmail,
-        serviceId,
       },
     });
 

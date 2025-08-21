@@ -160,7 +160,7 @@ export const emailUpdateSchema = z.object({
   headers: z
     .object({
       "x-service-id": z.string().min(1, "Service ID is required"),
-      "x-api-key": z.string().min(1, "Service Api Key is required"),
+      "x-service-secret": z.string().min(1, "Service Api Key is required"),
     })
     .catchall(z.unknown()),
 });
@@ -170,7 +170,7 @@ export const sessionVerificationSchema = z.object({
   headers: z
     .object({
       "x-service-id": z.string().min(1, "Service ID is required"),
-      "x-api-key": z.string().min(1, "Service Api Key is required"),
+      "x-service-secret": z.string().min(1, "Service Api Key is required"),
     })
     .catchall(z.unknown()),
 });
