@@ -148,25 +148,6 @@ export const accountVerificationSchema = z.object({
 });
 
 // --------------------------------- USER ACTION ROUTES SCHEMAS ----------------------------------
-// Email update schema
-export const emailUpdateSchema = z.object({
-  body: z.object({
-    userId: z
-      .string()
-      .or(z.number())
-      .transform((val) => Number(val)),
-    newEmail: emailSchema,
-    oldEmail: emailSchema.optional(),
-    verificationToken: z.string().optional(),
-  }),
-  headers: z
-    .object({
-      "x-service-id": z.string().min(1, "Service ID is required"),
-      "x-service-secret": z.string().min(1, "Service Api Key is required"),
-    })
-    .catchall(z.unknown()),
-});
-
 // Session verification schema
 export const sessionVerificationSchema = z.object({
   headers: z

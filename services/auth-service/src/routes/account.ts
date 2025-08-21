@@ -1,7 +1,6 @@
 import express from "express";
-import { getUserProfile, updateEmail } from "../controllers/userAction";
+import { getUserProfile } from "../controllers/userAction";
 import {
-  emailUpdateSchema,
   rateLimitConfig,
   sessionVerificationSchema,
   validateRequest,
@@ -22,10 +21,8 @@ router.use(verifyTokenWithSession);
 // User Profile Operations
 router.get("/me", validateRequest(sessionVerificationSchema), getUserProfile);
 
-// Account Update Operations
-router.patch("/update-email", validateRequest(emailUpdateSchema), updateEmail);
-
-// TODO:
+// TODO: Account Update Operations
+router.patch("/update-email", () => {});
 router.patch("/update-phone", () => {});
 router.patch("/change-password", () => {});
 router.patch("/deactivate", () => {});
