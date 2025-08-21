@@ -6,7 +6,7 @@ declare global {
       serviceInfo?: {
         serviceId: string;
         authenticatedAt: Date;
-        ipAddress?: string | undefined;
+        ipAddress?: string;
       };
       user?: {
         id: string;

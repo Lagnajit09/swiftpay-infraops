@@ -3,18 +3,6 @@ import crypto from "crypto";
 import { logSecurityEvent } from "../utils/securityEventLogging";
 import "dotenv/config";
 
-declare global {
-  namespace Express {
-    interface Request {
-      serviceInfo?: {
-        serviceId: string;
-        authenticatedAt: Date;
-        ipAddress?: string | undefined;
-      };
-    }
-  }
-}
-
 // Registered services and their secrets (in production, store in environment variables or secret manager)
 const SERVICE_SECRETS = {
   "user-service": process.env.USER_SERVICE_SECRET || "user-service-secret-key",

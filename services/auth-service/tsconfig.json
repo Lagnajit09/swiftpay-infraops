@@ -6,7 +6,8 @@
     "outDir": "dist",
     "strict": true,
     "esModuleInterop": true,
-    "typeRoots": ["./node_modules/@types", "./types"]
+    "skipLibCheck": true
   },
-  "include": ["src", "types"]
+  "include": ["src/**/*"],
+  "files": ["src/types/global.d.ts"]
 }

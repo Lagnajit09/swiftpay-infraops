@@ -30,21 +30,6 @@ import { getActiveSessions, revokeSession } from "../controllers/session";
 
 const router = express.Router();
 
-// Extend Express Request interface to include user property
-declare global {
-  namespace Express {
-    interface Request {
-      user?: {
-        id: string;
-        email: string;
-        number: string;
-        role: string;
-        walletID: string;
-      };
-    }
-  }
-}
-
 // Create rate limiters
 const signinLimiter = rateLimit(rateLimitConfig.signin);
 const signupLimiter = rateLimit(rateLimitConfig.signup);
