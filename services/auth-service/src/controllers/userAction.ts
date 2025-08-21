@@ -6,7 +6,6 @@ import prisma from "../lib/db";
 import { redisClient } from "../lib/redis";
 import { logSecurityEvent } from "../utils/securityEventLogging";
 import { sanitizeInput } from "../utils/validation";
-import { ALLOWED_SERVICES, SERVICE_KEYS } from "../lib/service-api";
 
 // Get user profile (for authenticated user)
 export const getUserProfile = async (req: Request, res: Response) => {

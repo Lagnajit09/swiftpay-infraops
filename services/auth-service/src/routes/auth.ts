@@ -1,7 +1,10 @@
 import express from "express";
 import rateLimit from "express-rate-limit";
 import { signup } from "../controllers/signup";
-import { verifyEmail } from "../controllers/emailVerification";
+import {
+  requestEmailVerification,
+  verifyEmail,
+} from "../controllers/emailVerification";
 import {
   changePassword,
   requestPasswordReset,
@@ -86,6 +89,13 @@ router.post(
   generalLimiter,
   validateRequest(changePasswordSchema),
   changePassword
+);
+
+// Request email verification for authenticated users
+router.post(
+  "/request-email-verification",
+  emailVerificationLimiter,
+  requestEmailVerification
 );
 
 router.post("/signout", generalLimiter, signout);

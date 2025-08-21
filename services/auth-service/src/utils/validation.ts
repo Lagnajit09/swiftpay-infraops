@@ -55,10 +55,12 @@ export const signupSchema = z.object({
 
 // Email verification schema
 export const emailVerificationSchema = z.object({
-  token: z
-    .string()
-    .min(1, "Token is required")
-    .regex(/^[a-f0-9]{64}$/, "Invalid token format"),
+  query: z.object({
+    token: z
+      .string()
+      .min(1, "Token is required")
+      .regex(/^[a-f0-9]{64}$/, "Invalid token format"),
+  }),
 });
 
 // Password reset request schema
