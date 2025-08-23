@@ -1,6 +1,9 @@
 node_modules
 npm-debug.log
 .git
+.env.prod
+.env.dev
+.env.local
 .env
 dist
 coverage

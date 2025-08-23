@@ -5,24 +5,11 @@ services:
     build:
       context: ./auth-service
       dockerfile: Dockerfile
-      target: production
     container_name: auth-service
     restart: always
-    env_file:
-      - ./auth-service/.env 
     ports:
-      - "5001:5001"  # host:container
-    depends_on:
-      - redis
-    networks:
-      - backend
-
-  redis:
-    image: redis:7-alpine
-    container_name: redis
-    restart: always
-    ports:
-      - "6379:6379"
+      - "5001:5001"
+    depends_on: []
     networks:
       - backend
 

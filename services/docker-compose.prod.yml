@@ -1,0 +1,17 @@
+version: "3.9"
+
+services:
+  auth-service:
+    build:
+      context: ./auth-service
+      dockerfile: Dockerfile
+      target: production
+    env_file:
+      - ./auth-service/.env.prod
+    # No volumes in prod
+    depends_on: []
+    environment:
+      # Supabase (Postgres) connection string
+      DATABASE_URL: ${DATABASE_URL}
+      # Upstash Redis URL
+      REDIS_URL: ${REDIS_URL}
