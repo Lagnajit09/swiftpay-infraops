@@ -7,7 +7,7 @@ services:
       dockerfile: Dockerfile
       target: production
     env_file:
-      - ./auth-service/.env.prod
+      - ./auth-service/.env
     # No volumes in prod
     depends_on: []
     environment:
