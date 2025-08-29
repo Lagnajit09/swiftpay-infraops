@@ -7,11 +7,7 @@ services:
       dockerfile: Dockerfile
       target: production
     env_file:
-      - ./auth-service/.env
+      - ./auth-service/.env.prod
     # No volumes in prod
     depends_on: []
-    environment:
-      # Supabase (Postgres) connection string
-      DATABASE_URL: ${DATABASE_URL}
-      # Upstash Redis URL
-      REDIS_URL: ${REDIS_URL}
+
