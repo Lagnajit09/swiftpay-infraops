@@ -18,6 +18,8 @@ const requiredEnvVars = [
   "EMAILJS_PUBLIC_ID",
   "EMAILJS_PRIVATE_ID",
   "DATABASE_URL",
+  "DIRECT_URL",
+  "REDIS_URL",
 ];
 
 for (const envVar of requiredEnvVars) {
