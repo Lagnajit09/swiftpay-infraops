@@ -3,6 +3,51 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum WalletStatus {
+  ACTIVE
+  SUSPENDED
+  CLOSED
+}
+
+enum LedgerType {
+  CREDIT
+  DEBIT
+}
+
+model Wallet {
+  id        String       @id @default(cuid())
+  userId    String       @unique
+  currency  String       @default("INR")
+  balance   BigInt       @default(0)
+  status    WalletStatus @default(ACTIVE)
+  version   Int          @default(1)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  entries LedgerEntry[]
+
+  @@index([status])
+  @@map("wallets")
+}
+
+model LedgerEntry {
+  id             String     @id @default(cuid())
+  walletId       String
+  wallet         Wallet     @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  type           LedgerType
+  amount         BigInt
+  referenceId    String?
+  description    String?
+  metadata       Json?
+  idempotencyKey String?
+  createdAt      DateTime   @default(now())
+
+  @@unique([walletId, idempotencyKey])
+  @@index([walletId, createdAt])
+  @@map("ledger_entries")
 }
