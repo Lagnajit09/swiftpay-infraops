@@ -3,6 +3,7 @@ import dotenv from "dotenv";
 import authRoutes from "./routes/auth";
 import adminRoutes from "./routes/admin";
 import userRoutes from "./routes/account";
+import serviceRoutes from "./routes/service";
 import cors from "cors";
 import helmet from "helmet";
 import cookieParser from "cookie-parser";
@@ -61,6 +62,7 @@ app.use(express.json());
 
 // service-to-service communication routes for user-account actions
 authRoutes.use("/s2s/account", userRoutes);
+authRoutes.use("/service/", serviceRoutes);
 
 // client-to-service auth-routes
 authRoutes.use("/admin", adminRoutes);

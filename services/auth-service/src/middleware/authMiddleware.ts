@@ -136,7 +136,11 @@ export const verifyTokenWithSession = async (
   next: Function
 ) => {
   try {
-    const sessionId = req.cookies?.sessionId;
+    const sessionId = req.cookies?.sessionId || req.headers["x-session-id"];
+
+    console.log(req.headers["x-session-id"]);
+    console.log(sessionId);
+    console.log(req.cookies.sessionId);
 
     // If no session ID, user is already signed out
     if (!sessionId) {
