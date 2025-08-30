@@ -4,10 +4,12 @@ import {
   sessionVerificationSchema,
   validateRequest,
 } from "../utils/validation";
+import { serviceAuthMiddleware } from "../middleware/serviceAuthMiddleware";
 
 const router = express.Router();
 
 // Protected routes (require authentication)
+router.use(serviceAuthMiddleware);
 router.use(verifyTokenWithSession);
 
 // Session verification endpoint
