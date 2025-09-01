@@ -1,14 +1,19 @@
 import express from "express";
 import { requireAuth } from "../middlewares/auth";
+import rateLimit from "express-rate-limit";
+import { rateLimitConfig } from "../utils/validation";
 
 const router = express.Router();
 
-router.use(requireAuth);
-
-router.get("/", (req, res) => {
-  const user = req.user;
-  res.json(user);
-});
+const createWalletLimiter = rateLimit(rateLimitConfig.createWallet);
+const balanceCheckLimiter = rateLimit(rateLimitConfig.balanceCheck);
+const transactionLimiter = rateLimit(rateLimitConfig.transaction);
+const generalLimiter = rateLimit(rateLimitConfig.general);
+const internalServiceLimiter = rateLimit(rateLimitConfig.internalService);
+const withdrawLimiter = rateLimit(rateLimitConfig.withdraw);
+const depositLimiter = rateLimit(rateLimitConfig.deposit);
+const transactionHistoryLimiter = rateLimit(rateLimitConfig.transactionHistory);
+const addressGenerationLimiter = rateLimit(rateLimitConfig.addressGeneration);
 
 // Health check endpoint for wallet service
 router.get("/health", (req, res) => {
@@ -19,5 +24,14 @@ router.get("/health", (req, res) => {
     timestamp: new Date().toISOString(),
   });
 });
+
+router.use(requireAuth);
+
+router.get("/", (req, res) => {
+  const user = req.user;
+  res.json(user);
+});
+
+router.get("/:id", () => {});
 
 export default router;
