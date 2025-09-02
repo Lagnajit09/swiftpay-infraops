@@ -1,24 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import { introspectSession } from "../lib/authClient";
 
-declare global {
-  namespace Express {
-    interface Request {
-      user?: {
-        userId: string;
-        email?: string;
-        number?: string;
-        role?: string;
-        walletID?: string;
-        isAuthenticated?: true;
-      };
-      serviceAuth?: {
-        serviceId: string;
-      };
-    }
-  }
-}
-
 export async function requireAuth(
   req: Request,
   res: Response,

@@ -1,14 +1,6 @@
 import { z } from "zod";
 import { Request, Response, NextFunction } from "express";
 
-declare global {
-  namespace Express {
-    interface Request {
-      validatedData?: any;
-    }
-  }
-}
-
 export const validateRequest = (schema: z.ZodSchema) => {
   return (req: Request, res: Response, next: NextFunction) => {
     try {
