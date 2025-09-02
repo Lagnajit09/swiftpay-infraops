@@ -11,7 +11,6 @@ import {
   resetPassword,
 } from "../controllers/resetPassword";
 import {
-  validateRequest,
   signupSchema,
   signinSchema,
   emailVerificationSchema,
@@ -30,6 +29,7 @@ import {
   verifyTokenWithSession,
 } from "../middleware/authMiddleware";
 import { getActiveSessions, revokeSession } from "../controllers/session";
+import { validateRequest } from "../middleware/validation";
 
 const router = express.Router();
 
@@ -39,6 +39,15 @@ const signupLimiter = rateLimit(rateLimitConfig.signup);
 const passwordResetLimiter = rateLimit(rateLimitConfig.passwordReset);
 const emailVerificationLimiter = rateLimit(rateLimitConfig.emailVerification);
 const generalLimiter = rateLimit(rateLimitConfig.general);
+
+// Health check endpoint for auth service
+router.get("/health", (req, res) => {
+  res.status(200).json({
+    service: "auth",
+    status: "healthy",
+    timestamp: new Date().toISOString(),
+  });
+});
 
 // Routes with validation and rate limiting
 router.post(
@@ -113,14 +122,5 @@ router.delete(
   validateRequest(sessionSchema),
   revokeSession
 );
-
-// Health check endpoint for auth service
-router.get("/health", (req, res) => {
-  res.status(200).json({
-    service: "auth",
-    status: "healthy",
-    timestamp: new Date().toISOString(),
-  });
-});
 
 export default router;

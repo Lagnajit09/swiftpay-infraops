@@ -1,12 +1,19 @@
 import express from "express";
 import { verifyTokenWithSession } from "../middleware/authMiddleware";
-import {
-  sessionVerificationSchema,
-  validateRequest,
-} from "../utils/validation";
+import { sessionVerificationSchema } from "../utils/validation";
 import { serviceAuthMiddleware } from "../middleware/serviceAuthMiddleware";
+import { validateRequest } from "../middleware/validation";
 
 const router = express.Router();
+
+// Health check endpoint (unprotected)
+router.get("/health", (req, res) => {
+  res.status(200).json({
+    message: "Session service is running",
+    success: true,
+    timestamp: new Date().toISOString(),
+  });
+});
 
 // Protected routes (require authentication)
 router.use(serviceAuthMiddleware);
@@ -45,15 +52,6 @@ router.post(
     }
   }
 );
-
-// Health check endpoint (unprotected)
-router.get("/health", (req, res) => {
-  res.status(200).json({
-    message: "Session service is running",
-    success: true,
-    timestamp: new Date().toISOString(),
-  });
-});
 
 // Get current session info
 router.get("/session/info", async (req, res) => {

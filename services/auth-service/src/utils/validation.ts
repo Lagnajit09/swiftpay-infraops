@@ -121,20 +121,22 @@ export const sessionSchema = z.object({
 
 // Security log query schema
 export const securityLogQuerySchema = z.object({
-  page: z.string().regex(/^\d+$/).transform(Number).default(1),
-  limit: z.string().regex(/^\d+$/).transform(Number).default(10),
-  eventType: z
-    .enum([
-      "LOGIN_ATTEMPT",
-      "PASSWORD_RESET_REQUEST",
-      "PASSWORD_RESET_SUCCESS",
-      "EMAIL_VERIFICATION",
-      "ACCOUNT_LOCKED",
-      "SUSPICIOUS_ACTIVITY",
-    ])
-    .optional(),
-  dateFrom: z.string().datetime().optional(),
-  dateTo: z.string().datetime().optional(),
+  query: z.object({
+    page: z.string().regex(/^\d+$/).transform(Number).default(1),
+    limit: z.string().regex(/^\d+$/).transform(Number).default(10),
+    eventType: z
+      .enum([
+        "LOGIN_ATTEMPT",
+        "PASSWORD_RESET_REQUEST",
+        "PASSWORD_RESET_SUCCESS",
+        "EMAIL_VERIFICATION",
+        "ACCOUNT_LOCKED",
+        "SUSPICIOUS_ACTIVITY",
+      ])
+      .optional(),
+    dateFrom: z.string().datetime().optional(),
+    dateTo: z.string().datetime().optional(),
+  }),
 });
 
 // Account verification schema for admin operations
@@ -157,43 +159,6 @@ export const sessionVerificationSchema = z.object({
     })
     .catchall(z.unknown()),
 });
-
-// ---------------------------------- VALIDATION FUNCTION -------------------------------------
-
-// Validation middleware helper
-export const validateRequest = (schema: z.ZodSchema) => {
-  return (req: any, res: any, next: any) => {
-    try {
-      // Assemble all data for validation
-      const dataToValidate = {
-        headers: req.headers,
-        body: req.body,
-        params: req.params,
-        query: req.query,
-      };
-
-      const result = schema.safeParse(dataToValidate);
-
-      if (!result.success) {
-        const errors = result.error.issues.map((err) => ({
-          field: err.path.join("."),
-          message: err.message,
-        }));
-
-        return res.status(400).json({
-          message: "Validation failed",
-          errors,
-        });
-      }
-
-      req.validatedData = result.data;
-      next();
-    } catch (error) {
-      console.error("Validation middleware error:", error);
-      res.status(500).json({ message: "Internal server error" });
-    }
-  };
-};
 
 // ----------------------------------- SANITIZATION HELPERS -----------------------------------
 export const sanitizeInput = {

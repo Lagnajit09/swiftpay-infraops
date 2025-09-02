@@ -1,19 +1,25 @@
 import express from "express";
 import rateLimit from "express-rate-limit";
-import {
-  rateLimitConfig,
-  securityLogQuerySchema,
-  validateRequest,
-} from "../utils/validation";
+import { rateLimitConfig, securityLogQuerySchema } from "../utils/validation";
 import {
   requireAdminRole,
   verifyTokenWithSession,
 } from "../middleware/authMiddleware";
 import { getSecurityLogs, getSecurityMetrics } from "../controllers/security";
+import { validateRequest } from "../middleware/validation";
 
 const generalLimiter = rateLimit(rateLimitConfig.general);
 
 const router = express.Router();
+
+// Health check endpoint for admin-auth service
+router.get("/health", (req, res) => {
+  res.status(200).json({
+    service: "admin-auth",
+    status: "healthy",
+    timestamp: new Date().toISOString(),
+  });
+});
 
 // Protected routes (require authentication)
 router.use(verifyTokenWithSession);
@@ -29,14 +35,5 @@ router.get(
   validateRequest(securityLogQuerySchema),
   getSecurityLogs
 );
-
-// Health check endpoint for admin-auth service
-router.get("/health", (req, res) => {
-  res.status(200).json({
-    service: "admin-auth",
-    status: "healthy",
-    timestamp: new Date().toISOString(),
-  });
-});
 
 export default router;
