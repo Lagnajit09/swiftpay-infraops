@@ -2,6 +2,7 @@ import express from "express";
 import { requireAuth } from "../middlewares/auth";
 import rateLimit from "express-rate-limit";
 import { rateLimitConfig } from "../utils/validation";
+import { getOrCreateMyWallet } from "../controllers/walletActions";
 
 const router = express.Router();
 
@@ -27,11 +28,6 @@ router.get("/health", (req, res) => {
 
 router.use(requireAuth);
 
-router.get("/", (req, res) => {
-  const user = req.user;
-  res.json(user);
-});
-
-router.get("/:id", () => {});
+router.get("/", getOrCreateMyWallet);
 
 export default router;
