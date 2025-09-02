@@ -16,6 +16,7 @@ declare global {
       serviceAuth?: {
         serviceId: string;
       };
+      validatedData?: any;
     }
   }
 }

@@ -1,8 +1,9 @@
 import express from "express";
 import { requireAuth } from "../middlewares/auth";
 import rateLimit from "express-rate-limit";
-import { rateLimitConfig } from "../utils/validation";
-import { getOrCreateMyWallet } from "../controllers/walletActions";
+import { creditDebitRequestSchema, rateLimitConfig } from "../utils/validation";
+import { credit, getOrCreateMyWallet } from "../controllers/walletActions";
+import { validateRequest } from "../middlewares/middleware";
 
 const router = express.Router();
 
@@ -28,6 +29,12 @@ router.get("/health", (req, res) => {
 
 router.use(requireAuth);
 
-router.get("/", getOrCreateMyWallet);
+router.get("/", balanceCheckLimiter, getOrCreateMyWallet);
+router.post(
+  "/credit",
+  depositLimiter,
+  validateRequest(creditDebitRequestSchema),
+  credit
+);
 
 export default router;

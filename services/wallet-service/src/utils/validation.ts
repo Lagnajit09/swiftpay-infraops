@@ -1,4 +1,33 @@
 import { ipKeyGenerator } from "express-rate-limit";
+import { z } from "zod";
+
+// Header constants
+export const idempotencyHeader = "idempotency-key";
+
+// Base schemas
+export const amountBodySchema = z.object({
+  amount: z.number().int().positive(), // amount in paise
+  description: z.string().max(200).optional(),
+  referenceId: z.string().max(100).optional(),
+});
+
+export const idempotencyKeySchema = z
+  .string()
+  .min(1, "Idempotency key cannot be empty")
+  .max(255, "Idempotency key too long")
+  .regex(/^[a-zA-Z0-9_-]+$/, "Idempotency key contains invalid characters");
+
+// Comprehensive request validation schema
+export const creditDebitRequestSchema = z.object({
+  body: amountBodySchema,
+  headers: z
+    .object({
+      [idempotencyHeader]: idempotencyKeySchema,
+    })
+    .catchall(z.unknown()),
+});
+
+// ---------------------------- RATE LIMITING CONFIGURATIONS ---------------------------
 
 export const rateLimitConfig = {
   // Wallet creation - more restrictive
@@ -9,7 +38,7 @@ export const rateLimitConfig = {
     standardHeaders: true,
     legacyHeaders: false,
     keyGenerator: (req: any) =>
-      `${ipKeyGenerator(req.ip)}-${req.user?.id || "unknown"}`,
+      `${ipKeyGenerator(req.ip)}-${req.user?.userId || "unknown"}`,
   },
 
   // Balance inquiries - moderate
@@ -29,18 +58,18 @@ export const rateLimitConfig = {
     standardHeaders: true,
     legacyHeaders: false,
     keyGenerator: (req: any) =>
-      `${ipKeyGenerator(req.ip)}-${req.user?.id || "unknown"}`,
+      `${ipKeyGenerator(req.ip)}-${req.user?.userId || "unknown"}`,
   },
 
   // Withdraw operations - very restrictive
   withdraw: {
-    windowMs: 60 * 60 * 1000, // 1 hour
+    windowMs: 30 * 60 * 1000, // 1 hour
     max: 10,
     message: "Too many withdrawal attempts. Please try again in 1 hour.",
     standardHeaders: true,
     legacyHeaders: false,
     keyGenerator: (req: any) =>
-      `${ipKeyGenerator(req.ip)}-${req.user?.id || "unknown"}`,
+      `${ipKeyGenerator(req.ip)}-${req.user?.userId || "unknown"}`,
   },
 
   // Deposit operations - moderate
@@ -51,7 +80,7 @@ export const rateLimitConfig = {
     standardHeaders: true,
     legacyHeaders: false,
     keyGenerator: (req: any) =>
-      `${ipKeyGenerator(req.ip)}-${req.user?.id || "unknown"}`,
+      `${ipKeyGenerator(req.ip)}-${req.user?.userId || "unknown"}`,
   },
 
   // Transaction history - lenient
@@ -72,7 +101,7 @@ export const rateLimitConfig = {
     standardHeaders: true,
     legacyHeaders: false,
     keyGenerator: (req: any) =>
-      `${ipKeyGenerator(req.ip)}-${req.user?.id || "unknown"}`,
+      `${ipKeyGenerator(req.ip)}-${req.user?.userId || "unknown"}`,
   },
 
   // General wallet API operations
