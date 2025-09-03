@@ -98,7 +98,7 @@ export const changePasswordSchema = z
 
 // Date of birth validation
 export const dobSchema = z
-  .string()
+  .date()
   .or(z.date())
   .refine((date) => {
     const dobDate = new Date(date);
@@ -113,6 +113,21 @@ export const addressSchema = z
   .min(10, "Address must be at least 10 characters")
   .max(200, "Address cannot exceed 200 characters")
   .regex(/^[a-zA-Z0-9\s,.-]+$/, "Address contains invalid characters");
+
+export const countrySchema = z
+  .string()
+  .min(1, "Country is required")
+  .max(100, "Country must be less than 100 characters");
+
+export const stateSchema = z
+  .string()
+  .min(1, "State is required")
+  .max(100, "State must be less than 100 characters");
+
+export const walletIDSchema = z
+  .string()
+  .min(1, "Wallet ID is required")
+  .max(200, "Wallet ID must be less than 200 characters");
 
 // Session management
 export const sessionSchema = z.object({
@@ -158,6 +173,64 @@ export const sessionVerificationSchema = z.object({
       "x-service-secret": z.string().min(1, "Service Api Key is required"),
     })
     .catchall(z.unknown()),
+});
+
+export const updateUserDetailsSchema = z.object({
+  body: z
+    .object({
+      name: nameSchema.optional(),
+      address: addressSchema.optional(),
+      country: countrySchema.optional(),
+      state: stateSchema.optional(),
+      dob: z
+        .union([
+          z.string().transform((str) => {
+            const date = new Date(str);
+            if (isNaN(date.getTime())) {
+              throw new Error("Invalid date format");
+            }
+            return date;
+          }),
+          z.date(),
+        ])
+        .pipe(dobSchema)
+        .optional(),
+      walletID: walletIDSchema.optional(),
+    })
+    // Allow other fields but validate basic constraints
+    .catchall(
+      z.union([
+        z.string().max(1000, "Field value too long"),
+        z.number(),
+        z.boolean(),
+        z.null(),
+      ])
+    )
+    .refine(
+      (data) => Object.keys(data).length > 0,
+      "At least one field must be provided for update"
+    )
+    .refine(
+      (data) => {
+        // Check for restricted fields
+        const restrictedFields = [
+          "email",
+          "number",
+          "password",
+          "id",
+          "createdAt",
+          "lastLoginAt",
+        ];
+        const hasRestrictedField = Object.keys(data).some((key) =>
+          restrictedFields.includes(key)
+        );
+        return !hasRestrictedField;
+      },
+      {
+        message:
+          "Cannot update restricted fields: email, number, password, id, createdAt, lastLoginAt",
+      }
+    ),
 });
 
 // ----------------------------------- SANITIZATION HELPERS -----------------------------------
