@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import prisma from "../lib/db";
-import { idempotencyHeader } from "../utils/validation";
+import { idempotencyHeader, sanitizeInput } from "../utils/validation";
 
 export async function getOrCreateMyWallet(req: Request, res: Response) {
   try {
@@ -31,7 +31,11 @@ export async function credit(req: Request, res: Response) {
     const idemKey = req.header(idempotencyHeader) || undefined;
     const { amount, description, referenceId } = req.body;
 
-    if (BigInt(amount) <= 0) {
+    const sanitizedAmount = sanitizeInput.amount(amount);
+    const sanitizedDesc = sanitizeInput.description(description);
+    const sanitizedRefId = sanitizeInput.referenceId(referenceId);
+
+    if (BigInt(sanitizedAmount) <= 0) {
       return res.status(400).json({ error: "Amount must be positive" });
     }
 
@@ -48,9 +52,9 @@ export async function credit(req: Request, res: Response) {
         data: {
           walletId: wallet.id,
           type: "CREDIT",
-          amount: BigInt(amount),
-          description,
-          referenceId,
+          amount: BigInt(sanitizedAmount),
+          description: sanitizedDesc,
+          referenceId: sanitizedRefId,
           idempotencyKey: idemKey,
         },
       });
@@ -59,7 +63,7 @@ export async function credit(req: Request, res: Response) {
       const updated = await tx.wallet.update({
         where: { id: wallet.id },
         data: {
-          balance: wallet.balance + BigInt(amount),
+          balance: wallet.balance + BigInt(sanitizedAmount),
           version: { increment: 1 },
         },
       });
@@ -123,7 +127,11 @@ export async function debit(req: Request, res: Response) {
     const idemKey = req.header(idempotencyHeader) || undefined;
     const { amount, description, referenceId } = req.body;
 
-    if (BigInt(amount) <= 0) {
+    const sanitizedAmount = sanitizeInput.amount(amount);
+    const sanitizedDesc = sanitizeInput.description(description);
+    const sanitizedRefId = sanitizeInput.referenceId(referenceId);
+
+    if (BigInt(sanitizedAmount) <= 0) {
       return res.status(400).json({ error: "Amount must be positive" });
     }
 
@@ -133,16 +141,16 @@ export async function debit(req: Request, res: Response) {
       });
       if (!wallet) throw new Error("WALLET_NOT_FOUND");
       if (wallet.status !== "ACTIVE") throw new Error("WALLET_NOT_ACTIVE");
-      if (wallet.balance < BigInt(amount))
+      if (wallet.balance < BigInt(sanitizedAmount))
         throw new Error("INSUFFICIENT_FUNDS");
 
       const entry = await tx.ledgerEntry.create({
         data: {
           walletId: wallet.id,
           type: "DEBIT",
-          amount: BigInt(amount),
-          description,
-          referenceId,
+          amount: BigInt(sanitizedAmount),
+          description: sanitizedDesc,
+          referenceId: sanitizedRefId,
           idempotencyKey: idemKey,
         },
       });
@@ -150,7 +158,7 @@ export async function debit(req: Request, res: Response) {
       const updated = await tx.wallet.update({
         where: { id: wallet.id },
         data: {
-          balance: wallet.balance - BigInt(amount),
+          balance: wallet.balance - BigInt(sanitizedAmount),
           version: { increment: 1 },
         },
       });
