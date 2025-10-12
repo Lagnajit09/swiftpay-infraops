@@ -8,8 +8,24 @@ services:
       target: dev
     env_file:
       - ./auth-service/.env.dev
+    command: npm run dev
     volumes:
       - ./auth-service:/app
+      - /app/node_modules
+    depends_on:
+      - postgres
+      - redis
+
+  wallet-service:
+    build:
+      context: ./wallet-service
+      dockerfile: Dockerfile
+      target: dev
+    env_file:
+      - ./wallet-service/.env.dev
+    command: npm run dev
+    volumes:
+      - ./wallet-service:/app
       - /app/node_modules
     depends_on:
       - postgres

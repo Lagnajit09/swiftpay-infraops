@@ -39,7 +39,7 @@ export async function credit(req: Request, res: Response) {
       return res.status(400).json({ error: "Amount must be positive" });
     }
 
-    const result = await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx: any) => {
       const wallet = await tx.wallet.findUnique({
         where: { userId: String(userId) },
       });
@@ -135,7 +135,7 @@ export async function debit(req: Request, res: Response) {
       return res.status(400).json({ error: "Amount must be positive" });
     }
 
-    const result = await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx: any) => {
       const wallet = await tx.wallet.findUnique({
         where: { userId: String(userId) },
       });

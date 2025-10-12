@@ -13,6 +13,18 @@ services:
     networks:
       - backend
 
+  wallet-service:
+    build:
+      context: ./wallet-service
+      dockerfile: Dockerfile
+    container_name: wallet-service
+    restart: always
+    ports:
+      - "5002:5002"
+    depends_on: []
+    networks:
+      - backend
+
 networks:
   backend:
     driver: bridge

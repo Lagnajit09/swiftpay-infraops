@@ -11,3 +11,12 @@ services:
     # No volumes in prod
     depends_on: []
 
+  wallet-service:
+    build:
+      context: ./wallet-service
+      dockerfile: Dockerfile
+      target: production
+    env_file:
+      - ./wallet-service/.env.prod
+    depends_on: []
+
