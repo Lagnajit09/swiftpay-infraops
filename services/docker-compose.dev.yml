@@ -8,13 +8,19 @@ services:
       target: dev
     env_file:
       - ./auth-service/.env.dev
-    command: npm run dev
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/swiftpaydb?schema=auth_service
+      - DIRECT_URL=postgresql://postgres:postgres@postgres:5432/swiftpaydb?schema=auth_service
+      - REDIS_URL=redis://redis:6379
+    command: sh -c "npx prisma migrate deploy && npm run dev"
     volumes:
       - ./auth-service:/app
       - /app/node_modules
     depends_on:
       - postgres
       - redis
+    networks:
+      - backend
 
   wallet-service:
     build:
@@ -23,13 +29,20 @@ services:
       target: dev
     env_file:
       - ./wallet-service/.env.dev
-    command: npm run dev
+    environment:
+      - AUTH_SERVICE_URL=http://auth-service:5001
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/swiftpaydb?schema=wallet_service
+      - DIRECT_URL=postgresql://postgres:postgres@postgres:5432/swiftpaydb?schema=wallet_service
+      - REDIS_URL=redis://redis:6379
+    command: sh -c "npx prisma migrate deploy && npm run dev"
     volumes:
       - ./wallet-service:/app
       - /app/node_modules
     depends_on:
       - postgres
       - redis
+    networks:
+      - backend
 
   postgres:
     image: postgres:15-alpine
