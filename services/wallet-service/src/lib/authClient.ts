@@ -14,7 +14,7 @@ export async function introspectSession(sessionId: string) {
           "x-service-id": "wallet-service",
           "x-service-secret": process.env.WALLET_SERVICE_SECRET,
         },
-        timeout: 2000,
+        timeout: 5000,
       }
     );
 

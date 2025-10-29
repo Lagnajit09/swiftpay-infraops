@@ -34,10 +34,6 @@ import { validateRequest } from "../middleware/validation";
 const router = express.Router();
 
 // Create rate limiters
-const signinLimiter = rateLimit(rateLimitConfig.signin);
-const signupLimiter = rateLimit(rateLimitConfig.signup);
-const passwordResetLimiter = rateLimit(rateLimitConfig.passwordReset);
-const emailVerificationLimiter = rateLimit(rateLimitConfig.emailVerification);
 const generalLimiter = rateLimit(rateLimitConfig.general);
 
 // Health check endpoint for auth service
@@ -49,11 +45,12 @@ router.get("/health", (req, res) => {
   });
 });
 
+router.use(generalLimiter);
+
 // Routes with validation and rate limiting
 router.post(
   "/signup",
   suspiciousIPDetection,
-  signupLimiter,
   validateRequest(signupSchema),
   signup
 );
@@ -61,7 +58,6 @@ router.post(
 router.post(
   "/signin",
   suspiciousIPDetection,
-  signinLimiter,
   validateRequest(signinSchema),
   checkExistingSession,
   signin
@@ -69,7 +65,6 @@ router.post(
 
 router.get(
   "/verify-email",
-  emailVerificationLimiter,
   validateRequest(emailVerificationSchema),
   verifyEmail
 );
@@ -77,14 +72,12 @@ router.get(
 router.post(
   "/request-reset",
   suspiciousIPDetection,
-  passwordResetLimiter,
   validateRequest(passwordResetRequestSchema),
   requestPasswordReset
 );
 
 router.post(
   "/reset-password",
-  passwordResetLimiter,
   validateRequest(passwordResetSchema),
   resetPassword
 );
@@ -95,30 +88,24 @@ router.use(verifyTokenWithSession);
 // Change password (requires current password)
 router.post(
   "/change-password",
-  generalLimiter,
   validateRequest(changePasswordSchema),
   changePassword
 );
 
 // Request email verification for authenticated users
-router.post(
-  "/request-email-verification",
-  emailVerificationLimiter,
-  requestEmailVerification
-);
+router.post("/request-email-verification", requestEmailVerification);
 
-router.post("/signout", generalLimiter, signout);
+router.post("/signout", signout);
 
 // Get user security information
-router.get("/security-info", generalLimiter, getSecurityInfo);
+router.get("/security-info", getSecurityInfo);
 
 // Get active sessions
-router.get("/sessions", generalLimiter, getActiveSessions);
+router.get("/sessions", getActiveSessions);
 
 // Revoke specific session
 router.delete(
   "/sessions/:sessionId",
-  generalLimiter,
   validateRequest(sessionSchema),
   revokeSession
 );

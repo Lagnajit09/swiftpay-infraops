@@ -11,15 +11,7 @@ import { validateRequest } from "../middlewares/middleware";
 
 const router = express.Router();
 
-const createWalletLimiter = rateLimit(rateLimitConfig.createWallet);
-const balanceCheckLimiter = rateLimit(rateLimitConfig.balanceCheck);
-const transactionLimiter = rateLimit(rateLimitConfig.transaction);
 const generalLimiter = rateLimit(rateLimitConfig.general);
-const internalServiceLimiter = rateLimit(rateLimitConfig.internalService);
-const withdrawLimiter = rateLimit(rateLimitConfig.withdraw);
-const depositLimiter = rateLimit(rateLimitConfig.deposit);
-const transactionHistoryLimiter = rateLimit(rateLimitConfig.transactionHistory);
-const addressGenerationLimiter = rateLimit(rateLimitConfig.addressGeneration);
 
 // Health check endpoint for wallet service
 router.get("/health", (req, res) => {
@@ -32,19 +24,10 @@ router.get("/health", (req, res) => {
 });
 
 router.use(requireAuth);
+router.use(generalLimiter);
 
-router.get("/", balanceCheckLimiter, getOrCreateMyWallet);
-router.post(
-  "/credit",
-  transactionLimiter,
-  validateRequest(creditDebitRequestSchema),
-  credit
-);
-router.post(
-  "/debit",
-  transactionLimiter,
-  validateRequest(creditDebitRequestSchema),
-  debit
-);
+router.get("/", getOrCreateMyWallet);
+router.post("/credit", validateRequest(creditDebitRequestSchema), credit);
+router.post("/debit", validateRequest(creditDebitRequestSchema), debit);
 
 export default router;

@@ -282,44 +282,6 @@ export const sanitizeInput = {
 
 // ---------------------------- RATE LIMITING CONFIGURATIONS ---------------------------
 export const rateLimitConfig = {
-  signin: {
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 3,
-    message: "Too many login attempts. Please try again in 15 minutes.",
-    standardHeaders: true,
-    legacyHeaders: false,
-    skipSuccessfulRequests: true,
-    keyGenerator: (req: any) =>
-      `${ipKeyGenerator(req.ip)}-${req.body?.email || "unknown"}`,
-  },
-
-  signup: {
-    windowMs: 60 * 60 * 1000, // 1 hour
-    max: 3,
-    message: "Too many signup attempts. Please try again in 1 hour.",
-    standardHeaders: true,
-    legacyHeaders: false,
-  },
-
-  passwordReset: {
-    windowMs: 60 * 60 * 1000, // 1 hour
-    max: 3,
-    message: "Too many password reset requests. Please try again in 1 hour.",
-    standardHeaders: true,
-    legacyHeaders: false,
-    keyGenerator: (req: any) =>
-      `${ipKeyGenerator(req.ip)}-${req.body?.email || "unknown"}`,
-  },
-
-  emailVerification: {
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 5,
-    message:
-      "Too many email verification attempts. Please try again in 15 minutes.",
-    standardHeaders: true,
-    legacyHeaders: false,
-  },
-
   // Moderate for general API
   general: {
     windowMs: 15 * 60 * 1000, // 15 minutes
