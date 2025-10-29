@@ -3,7 +3,6 @@ import { getUserProfile, updateUserDetails } from "../controllers/userAction";
 import {
   rateLimitConfig,
   sessionVerificationSchema,
-  updateUserDetailsSchema,
 } from "../utils/validation";
 import { verifyTokenWithSession } from "../middleware/authMiddleware";
 import rateLimit from "express-rate-limit";
@@ -30,11 +29,7 @@ router.use(verifyTokenWithSession);
 
 // User Profile Operations
 router.get("/me", validateRequest(sessionVerificationSchema), getUserProfile);
-router.post(
-  "/update-user",
-  validateRequest(updateUserDetailsSchema),
-  updateUserDetails
-);
+router.post("/update-user", updateUserDetails);
 
 // TODO: Account Update Operations
 router.patch("/update-email", () => {});

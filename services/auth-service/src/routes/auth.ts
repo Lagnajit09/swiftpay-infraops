@@ -10,16 +10,7 @@ import {
   requestPasswordReset,
   resetPassword,
 } from "../controllers/resetPassword";
-import {
-  signupSchema,
-  signinSchema,
-  emailVerificationSchema,
-  passwordResetRequestSchema,
-  passwordResetSchema,
-  rateLimitConfig,
-  changePasswordSchema,
-  sessionSchema,
-} from "../utils/validation";
+import { rateLimitConfig } from "../utils/validation";
 import { signin } from "../controllers/signin";
 import { signout } from "../controllers/signout";
 import { getSecurityInfo } from "../controllers/security";
@@ -29,7 +20,6 @@ import {
   verifyTokenWithSession,
 } from "../middleware/authMiddleware";
 import { getActiveSessions, revokeSession } from "../controllers/session";
-import { validateRequest } from "../middleware/validation";
 
 const router = express.Router();
 
@@ -48,49 +38,21 @@ router.get("/health", (req, res) => {
 router.use(generalLimiter);
 
 // Routes with validation and rate limiting
-router.post(
-  "/signup",
-  suspiciousIPDetection,
-  validateRequest(signupSchema),
-  signup
-);
+router.post("/signup", suspiciousIPDetection, signup);
 
-router.post(
-  "/signin",
-  suspiciousIPDetection,
-  validateRequest(signinSchema),
-  checkExistingSession,
-  signin
-);
+router.post("/signin", suspiciousIPDetection, checkExistingSession, signin);
 
-router.get(
-  "/verify-email",
-  validateRequest(emailVerificationSchema),
-  verifyEmail
-);
+router.get("/verify-email", verifyEmail);
 
-router.post(
-  "/request-reset",
-  suspiciousIPDetection,
-  validateRequest(passwordResetRequestSchema),
-  requestPasswordReset
-);
+router.post("/request-reset", suspiciousIPDetection, requestPasswordReset);
 
-router.post(
-  "/reset-password",
-  validateRequest(passwordResetSchema),
-  resetPassword
-);
+router.post("/reset-password", resetPassword);
 
 // Protected routes (require authentication)
 router.use(verifyTokenWithSession);
 
 // Change password (requires current password)
-router.post(
-  "/change-password",
-  validateRequest(changePasswordSchema),
-  changePassword
-);
+router.post("/change-password", changePassword);
 
 // Request email verification for authenticated users
 router.post("/request-email-verification", requestEmailVerification);
@@ -104,10 +66,6 @@ router.get("/security-info", getSecurityInfo);
 router.get("/sessions", getActiveSessions);
 
 // Revoke specific session
-router.delete(
-  "/sessions/:sessionId",
-  validateRequest(sessionSchema),
-  revokeSession
-);
+router.delete("/sessions/:sessionId", revokeSession);
 
 export default router;
