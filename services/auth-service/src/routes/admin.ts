@@ -1,12 +1,11 @@
 import express from "express";
 import rateLimit from "express-rate-limit";
-import { rateLimitConfig, securityLogQuerySchema } from "../utils/validation";
+import { rateLimitConfig } from "../utils/validation";
 import {
   requireAdminRole,
   verifyTokenWithSession,
 } from "../middleware/authMiddleware";
 import { getSecurityLogs, getSecurityMetrics } from "../controllers/security";
-import { validateRequest } from "../middleware/validation";
 
 const generalLimiter = rateLimit(rateLimitConfig.general);
 
@@ -29,11 +28,6 @@ router.use(requireAdminRole);
 router.get("/security-metrics", generalLimiter, getSecurityMetrics);
 
 // Get security logs (admin only)
-router.get(
-  "/security-logs",
-  generalLimiter,
-  validateRequest(securityLogQuerySchema),
-  getSecurityLogs
-);
+router.get("/security-logs", generalLimiter, getSecurityLogs);
 
 export default router;

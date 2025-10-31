@@ -130,7 +130,7 @@ export const walletIDSchema = z
 
 // Session management
 export const sessionSchema = z.object({
-  sessionId: z.string().min(1, "Session ID is required"),
+  query: z.object({ sessionId: z.string().min(1, "Session ID is required") }),
 });
 
 // Security log query schema

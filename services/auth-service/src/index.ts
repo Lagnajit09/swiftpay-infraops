@@ -57,16 +57,7 @@ const corsOptions = {
 app.use(cors(corsOptions));
 
 app.use(cookieParser());
-
 app.use(express.json());
-
-// service-to-service communication routes for user-account actions
-authRoutes.use("/s2s/account", userRoutes);
-authRoutes.use("/service/", serviceRoutes);
-
-// client-to-service auth-routes
-authRoutes.use("/admin", adminRoutes);
-app.use("/api/auth", authRoutes);
 
 // Health check endpoint
 app.get("/", (req, res) => {
@@ -82,6 +73,17 @@ app.get("/", (req, res) => {
 app.get("/health", (req, res) => {
   res.status(200).json({ status: "healthy" });
 });
+
+// Mount routes directly on app - DO NOT nest routers
+// service-to-service communication routes
+app.use("/api/auth/s2s/account", userRoutes);
+app.use("/api/auth/service", serviceRoutes);
+
+// admin routes
+app.use("/api/auth/admin", adminRoutes);
+
+// main auth routes
+app.use("/api/auth", authRoutes);
 
 // Global error handler
 app.use(
@@ -106,6 +108,6 @@ app.use(
 const PORT = process.env.PORT || 5001;
 const server = app.listen(PORT, () => {
   console.log(`🟢 Auth service running on port ${PORT}`);
-  console.log(`🌍 Environment: ${process.env.NODE_ENV || "development"}`);
+  console.log(`🌐 Environment: ${process.env.NODE_ENV || "development"}`);
   console.log(`🔒 CORS enabled for: ${process.env.FRONTEND_URL}`);
 });
