@@ -3,6 +3,7 @@ import dotenv from "dotenv";
 dotenv.config();
 const app = express();
 import authRouter from "./routes/auth";
+import userRouter from "./routes/user";
 
 app.get("/", (req, res) => {
   res.send("Hello from main!");
@@ -10,6 +11,7 @@ app.get("/", (req, res) => {
 
 app.use(express.json());
 app.use("/api/auth", authRouter);
+app.use("/api/user", userRouter);
 
 app.listen(5000, () => {
   console.log(`🟢 Main service running on port ${5000}`);

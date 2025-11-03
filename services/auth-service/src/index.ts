@@ -76,7 +76,7 @@ app.get("/health", (req, res) => {
 
 // Mount routes directly on app - DO NOT nest routers
 // service-to-service communication routes
-app.use("/api/auth/s2s/account", userRoutes);
+app.use("/api/auth/account", userRoutes);
 app.use("/api/auth/service", serviceRoutes);
 
 // admin routes

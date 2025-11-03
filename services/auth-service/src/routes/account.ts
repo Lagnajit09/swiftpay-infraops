@@ -12,7 +12,7 @@ import { validateRequest } from "../middleware/validation";
 const router = express.Router();
 
 // Rate limiter for internal service calls
-const internalServiceLimiter = rateLimit(rateLimitConfig.internalService);
+const generalLimiter = rateLimit(rateLimitConfig.general);
 
 // Health check endpoint for account-actions service
 router.get("/health", (req, res) => {
@@ -23,12 +23,12 @@ router.get("/health", (req, res) => {
   });
 });
 
-router.use(internalServiceLimiter);
+router.use(generalLimiter);
 router.use(serviceAuthMiddleware);
 router.use(verifyTokenWithSession);
 
 // User Profile Operations
-router.get("/me", validateRequest(sessionVerificationSchema), getUserProfile);
+router.get("/me", getUserProfile);
 router.post("/update-user", updateUserDetails);
 
 // TODO: Account Update Operations

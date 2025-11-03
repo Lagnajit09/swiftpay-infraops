@@ -41,6 +41,14 @@ export const rateLimitConfig = {
     legacyHeaders: false,
   },
 
+  updateUserLimiter: {
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 10,
+    message: "Too many profile update attempts. Please try again later.",
+    standardHeaders: true,
+    legacyHeaders: false,
+  },
+
   //   =================== WALLET OR TRANSACTION RELATED =====================
 
   // Wallet creation - more restrictive

@@ -15,6 +15,8 @@ export function proxyRequest(method: HttpMethod, path: string) {
         "content-type": req.headers["content-type"],
         authorization: req.headers["authorization"],
         cookie: req.headers["cookie"],
+        "x-service-id": req.headers["x-service-id"],
+        "x-service-secret": req.headers["x-service-secret"],
       };
 
       // Remove undefined headers
