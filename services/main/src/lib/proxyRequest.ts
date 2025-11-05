@@ -19,6 +19,11 @@ export function proxyRequest(method: HttpMethod, path: string) {
         "x-service-secret": req.headers["x-service-secret"],
       };
 
+      // If req.user.userId exists and request is to auth-service, pass userId
+      if (req.user?.userId) {
+        headersToForward["x-user-id"] = req.user.userId;
+      }
+
       // Remove undefined headers
       Object.keys(headersToForward).forEach((key) => {
         if (!headersToForward[key]) {

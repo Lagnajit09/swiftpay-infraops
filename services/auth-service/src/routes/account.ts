@@ -25,7 +25,6 @@ router.get("/health", (req, res) => {
 
 router.use(generalLimiter);
 router.use(serviceAuthMiddleware);
-router.use(verifyTokenWithSession);
 
 // User Profile Operations
 router.get("/me", getUserProfile);

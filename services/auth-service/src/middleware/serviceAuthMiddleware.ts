@@ -5,6 +5,7 @@ import "dotenv/config";
 
 // Registered services and their secrets (in production, store in environment variables or secret manager)
 const SERVICE_SECRETS = {
+  "main-service": process.env.MAIN_SERVICE_SECRET || "main-service-secret-key",
   "user-service": process.env.USER_SERVICE_SECRET || "user-service-secret-key",
   "wallet-service":
     process.env.WALLET_SERVICE_SECRET || "wallet-service-secret-key",
@@ -29,6 +30,8 @@ export const serviceAuthMiddleware = async (
     const timestamp = req.headers["x-timestamp"] as string;
     const signature = req.headers["x-signature"] as string;
     const ipAddress = req.ip || req.socket?.remoteAddress;
+
+    console.log(serviceId, serviceSecret);
 
     // Basic validation
     if (!serviceId || !serviceSecret) {

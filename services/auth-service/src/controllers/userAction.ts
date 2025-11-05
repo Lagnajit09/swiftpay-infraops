@@ -6,7 +6,7 @@ import { logSecurityEvent } from "../utils/securityEventLogging";
 // Get user profile (for authenticated user)
 export const getUserProfile = async (req: Request, res: Response) => {
   try {
-    const userId = req.user?.id;
+    const userId = req.user?.id || req.headers["x-user-id"]?.toString();
 
     if (!userId) {
       return res
@@ -47,7 +47,7 @@ export const getUserProfile = async (req: Request, res: Response) => {
 };
 
 export const updateUserDetails = async (req: Request, res: Response) => {
-  const userId = req.user?.id;
+  const userId = req.user?.id || req.headers["x-user-id"]?.toString();
   const userEmail = req.user?.email;
   const ipAddress = req.ip || req.socket?.remoteAddress;
   const userAgent = req.get("User-Agent");
