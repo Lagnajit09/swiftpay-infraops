@@ -4,7 +4,10 @@ import { idempotencyHeader, sanitizeInput } from "../utils/validation";
 
 export async function getOrCreateMyWallet(req: Request, res: Response) {
   try {
-    const userId = req.user!.userId;
+    const userId = req.user?.userId || req.headers["x-user-id"];
+    console.log("userId", userId);
+    console.log("req.user", req.user);
+    console.log("req.headers", req.headers);
 
     const wallet = await prisma.wallet.upsert({
       where: { userId: String(userId) },
@@ -27,7 +30,7 @@ export async function getOrCreateMyWallet(req: Request, res: Response) {
 
 export async function credit(req: Request, res: Response) {
   try {
-    const userId = req.user!.userId;
+    const userId = req.user?.userId || req.headers["x-user-id"];
     const idemKey = req.header(idempotencyHeader) || undefined;
     const { amount, description, referenceId } = req.body;
 
@@ -122,7 +125,7 @@ export async function credit(req: Request, res: Response) {
 
 export async function debit(req: Request, res: Response) {
   try {
-    const userId = req.user!.userId;
+    const userId = req.user?.userId || req.headers["x-user-id"];
 
     const idemKey = req.header(idempotencyHeader) || undefined;
     const { amount, description, referenceId } = req.body;

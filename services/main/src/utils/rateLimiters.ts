@@ -82,11 +82,11 @@ export const rateLimitConfig = {
       `${ipKeyGenerator(req.ip)}-${req.user?.userId || "unknown"}`,
   },
 
-  // Withdraw operations - very restrictive
+  // Withdraw operations - moderate
   withdraw: {
-    windowMs: 30 * 60 * 1000, // 1 hour
-    max: 10,
-    message: "Too many withdrawal attempts. Please try again in 1 hour.",
+    windowMs: 30 * 60 * 1000, // 30 minutes
+    max: 20,
+    message: "Too many withdrawal attempts. Please try again in 30 minutes.",
     standardHeaders: true,
     legacyHeaders: false,
     keyGenerator: (req: any) =>

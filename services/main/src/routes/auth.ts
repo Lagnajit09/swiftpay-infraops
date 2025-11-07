@@ -24,41 +24,44 @@ const passwordResetLimiter = rateLimit(rateLimitConfig.passwordReset);
 type HttpMethod = "get" | "post" | "put" | "delete";
 
 // Public routes with specific validation and rate limiting
-router.get("/health", proxyRequest("get", "/api/auth/health"));
+router.get(
+  "/health",
+  proxyRequest("get", "/api/auth/health", { service: "auth" })
+);
 
 router.post(
   "/signup",
   signupLimiter,
   validateRequest(signupSchema),
-  proxyRequest("post", "/api/auth/signup")
+  proxyRequest("post", "/api/auth/signup", { service: "auth" })
 );
 
 router.post(
   "/signin",
   signinLimiter,
   validateRequest(signinSchema),
-  proxyRequest("post", "/api/auth/signin")
+  proxyRequest("post", "/api/auth/signin", { service: "auth" })
 );
 
 router.get(
   "/verify-email",
   emailVerificationLimiter,
   validateRequest(emailVerificationSchema),
-  proxyRequest("get", "/api/auth/verify-email")
+  proxyRequest("get", "/api/auth/verify-email", { service: "auth" })
 );
 
 router.post(
   "/request-reset",
   passwordResetLimiter,
   validateRequest(passwordResetRequestSchema),
-  proxyRequest("post", "/api/auth/request-reset")
+  proxyRequest("post", "/api/auth/request-reset", { service: "auth" })
 );
 
 router.post(
   "/reset-password",
   passwordResetLimiter,
   validateRequest(passwordResetSchema),
-  proxyRequest("post", "/api/auth/reset-password")
+  proxyRequest("post", "/api/auth/reset-password", { service: "auth" })
 );
 
 // Protected routes (these require authentication at auth-service level)
@@ -68,24 +71,35 @@ router.use(generalLimiter);
 router.post(
   "/change-password",
   validateRequest(changePasswordSchema),
-  proxyRequest("post", "/api/auth/change-password")
+  proxyRequest("post", "/api/auth/change-password", { service: "auth" })
 );
 
 router.post(
   "/request-email-verification",
-  proxyRequest("post", "/api/auth/request-email-verification")
+  proxyRequest("post", "/api/auth/request-email-verification", {
+    service: "auth",
+  })
 );
 
-router.post("/signout", proxyRequest("post", "/api/auth/signout"));
+router.post(
+  "/signout",
+  proxyRequest("post", "/api/auth/signout", { service: "auth" })
+);
 
-router.get("/security-info", proxyRequest("get", "/api/auth/security-info"));
+router.get(
+  "/security-info",
+  proxyRequest("get", "/api/auth/security-info", { service: "auth" })
+);
 
-router.get("/sessions", proxyRequest("get", "/api/auth/sessions"));
+router.get(
+  "/sessions",
+  proxyRequest("get", "/api/auth/sessions", { service: "auth" })
+);
 
 router.delete(
   "/sessions/:sessionId",
   validateRequest(sessionSchema),
-  proxyRequest("delete", "/api/auth/sessions/:sessionId")
+  proxyRequest("delete", "/api/auth/sessions/:sessionId", { service: "auth" })
 );
 
 // Catch-all for any other routes (optional - for future extensibility)
@@ -97,7 +111,10 @@ router.use(async (req: Request, res: Response, next: NextFunction) => {
     return res.status(405).json({ message: "Method not allowed" });
   }
 
-  return proxyRequest(method as HttpMethod, path)(req, res);
+  return proxyRequest(method as HttpMethod, path, { service: "auth" })(
+    req,
+    res
+  );
 });
 
 export default router;

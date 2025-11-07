@@ -13,12 +13,16 @@ const updateUserLimiter = rateLimit(rateLimitConfig.updateUserLimiter);
 
 router.use(requireAuth);
 
-router.get("/me", generalLimiter, proxyRequest("get", "/api/auth/account/me"));
+router.get(
+  "/me",
+  generalLimiter,
+  proxyRequest("get", "/api/auth/account/me", { service: "auth" })
+);
 router.post(
   "/update-user",
   updateUserLimiter,
   validateRequest(updateUserDetailsSchema),
-  proxyRequest("post", "/api/auth/account/update-user")
+  proxyRequest("post", "/api/auth/account/update-user", { service: "auth" })
 );
 
 export default router;

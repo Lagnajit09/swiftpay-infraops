@@ -4,6 +4,7 @@ dotenv.config();
 const app = express();
 import authRouter from "./routes/auth";
 import userRouter from "./routes/user";
+import walletRouter from "./routes/wallet";
 
 app.get("/", (req, res) => {
   res.send("Hello from main!");
@@ -12,6 +13,7 @@ app.get("/", (req, res) => {
 app.use(express.json());
 app.use("/api/auth", authRouter);
 app.use("/api/user", userRouter);
+app.use("/api/wallet", walletRouter);
 
 app.listen(5000, () => {
   console.log(`🟢 Main service running on port ${5000}`);

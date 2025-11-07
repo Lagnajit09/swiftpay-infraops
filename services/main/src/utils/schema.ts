@@ -220,3 +220,32 @@ export const updateUserDetailsSchema = z.object({
       }
     ),
 });
+
+// ========================== WALLET RELATED ===========================
+
+// Header constants
+export const idempotencyHeader = "idempotency-key";
+
+// Base schemas
+export const amountBodySchema = z.object({
+  amount: z.number().int().positive(), // amount in paise
+  description: z.string().max(200).optional(),
+  referenceId: z.string().max(100).optional(),
+});
+
+export const idempotencyKeySchema = z
+  .string()
+  .min(1, "Idempotency key cannot be empty")
+  .max(255, "Idempotency key too long")
+  .regex(/^[a-zA-Z0-9_-]+$/, "Idempotency key contains invalid characters");
+
+// Comprehensive request validation schema
+
+export const creditDebitRequestSchema = z.object({
+  body: amountBodySchema,
+  headers: z
+    .object({
+      [idempotencyHeader]: idempotencyKeySchema,
+    })
+    .catchall(z.unknown()),
+});

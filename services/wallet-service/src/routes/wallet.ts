@@ -23,11 +23,10 @@ router.get("/health", (req, res) => {
   });
 });
 
-router.use(requireAuth);
 router.use(generalLimiter);
 
 router.get("/", getOrCreateMyWallet);
-router.post("/credit", validateRequest(creditDebitRequestSchema), credit);
-router.post("/debit", validateRequest(creditDebitRequestSchema), debit);
+router.post("/credit", credit);
+router.post("/debit", debit);
 
 export default router;
