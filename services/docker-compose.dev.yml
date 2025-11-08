@@ -1,6 +1,27 @@
 version: "3.9"
 
 services:
+  main-service:
+    build:
+      context: ./main
+      dockerfile: Dockerfile
+      target: dev
+    env_file:
+      - ./main/.env.dev
+    environment:
+      - AUTH_SERVICE_URL=http://auth-service:5001
+      - WALLET_SERVICE_URL=http://wallet-service:5002
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:3000}
+    command: sh -c "npm run dev"
+    volumes:
+      - ./main:/app
+      - /app/node_modules
+    depends_on:
+      - auth-service
+      - wallet-service
+    networks:
+      - backend
+
   auth-service:
     build:
       context: ./auth-service

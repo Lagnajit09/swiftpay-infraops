@@ -1,22 +1,54 @@
 version: "3.9"
 
 services:
+  main-service:
+    build:
+      context: ./main
+      dockerfile: Dockerfile
+      target: production
+    container_name: main-service
+    restart: always
+    ports:
+      - "5000:5000"
+    env_file:
+      - ./main/.env.prod
+    depends_on:
+      - auth-service
+      - wallet-service
+    networks:
+      - backend
+
   auth-service:
     build:
       context: ./auth-service
       dockerfile: Dockerfile
       target: production
+    container_name: auth-service
+    restart: always
+    ports:
+      - "5001:5001"
     env_file:
       - ./auth-service/.env.prod
-    # No volumes in prod
     depends_on: []
+    networks:
+      - backend
 
   wallet-service:
     build:
       context: ./wallet-service
       dockerfile: Dockerfile
       target: production
+    container_name: wallet-service
+    restart: always
+    ports:
+      - "5002:5002"
     env_file:
       - ./wallet-service/.env.prod
     depends_on: []
+    networks:
+      - backend
+
+networks:
+  backend:
+    driver: bridge
 

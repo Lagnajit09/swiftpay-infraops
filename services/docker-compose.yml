@@ -1,6 +1,18 @@
 version: "3.9"
 
 services:
+  main-service:
+    build:
+      context: ./main
+      dockerfile: Dockerfile
+    container_name: main-service
+    restart: always
+    ports:
+      - "5000:5000"
+    depends_on: []
+    networks:
+      - backend
+
   auth-service:
     build:
       context: ./auth-service
