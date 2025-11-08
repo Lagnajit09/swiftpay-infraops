@@ -1,8 +1,6 @@
 import express from "express";
 import dotenv from "dotenv";
-import cors from "cors";
 import cookieParser from "cookie-parser";
-import helmet from "helmet";
 import walletRoutes from "./routes/wallet";
 
 dotenv.config();
@@ -23,30 +21,6 @@ for (const envVar of requiredEnvVars) {
 }
 
 const app = express();
-
-// Security middleware
-app.use(
-  helmet({
-    contentSecurityPolicy: {
-      directives: {
-        defaultSrc: ["'self'"],
-        styleSrc: ["'self'", "'unsafe-inline'"],
-        scriptSrc: ["'self'"],
-        imgSrc: ["'self'", "data:", "https:"],
-      },
-    },
-  })
-);
-
-// CORS configuration
-const corsOptions = {
-  origin: process.env.FRONTEND_URL,
-  credentials: true,
-  optionsSuccessStatus: 200,
-  methods: ["GET", "POST", "PUT", "DELETE"],
-  allowedHeaders: ["Content-Type", "Authorization"],
-};
-app.use(cors(corsOptions));
 
 app.use(cookieParser());
 
@@ -93,5 +67,4 @@ const PORT = process.env.PORT || 5002;
 const server = app.listen(PORT, () => {
   console.log(`🟢 Wallet service running on port ${PORT}`);
   console.log(`🌍 Environment: ${process.env.NODE_ENV || "development"}`);
-  console.log(`🔒 CORS enabled for: ${process.env.FRONTEND_URL}`);
 });

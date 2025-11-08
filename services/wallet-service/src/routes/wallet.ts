@@ -1,13 +1,11 @@
 import express from "express";
-import { requireAuth } from "../middlewares/auth";
 import rateLimit from "express-rate-limit";
-import { creditDebitRequestSchema, rateLimitConfig } from "../utils/validation";
+import { rateLimitConfig } from "../utils/validation";
 import {
   credit,
   debit,
   getOrCreateMyWallet,
 } from "../controllers/walletActions";
-import { validateRequest } from "../middlewares/middleware";
 
 const router = express.Router();
 

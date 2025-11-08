@@ -4,8 +4,6 @@ import authRoutes from "./routes/auth";
 import adminRoutes from "./routes/admin";
 import userRoutes from "./routes/account";
 import serviceRoutes from "./routes/service";
-import cors from "cors";
-import helmet from "helmet";
 import cookieParser from "cookie-parser";
 
 dotenv.config();
@@ -31,30 +29,6 @@ for (const envVar of requiredEnvVars) {
 }
 
 const app = express();
-
-// Security middleware
-app.use(
-  helmet({
-    contentSecurityPolicy: {
-      directives: {
-        defaultSrc: ["'self'"],
-        styleSrc: ["'self'", "'unsafe-inline'"],
-        scriptSrc: ["'self'"],
-        imgSrc: ["'self'", "data:", "https:"],
-      },
-    },
-  })
-);
-
-// CORS configuration
-const corsOptions = {
-  origin: process.env.FRONTEND_URL,
-  credentials: true,
-  optionsSuccessStatus: 200,
-  methods: ["GET", "POST", "PUT", "DELETE"],
-  allowedHeaders: ["Content-Type", "Authorization"],
-};
-app.use(cors(corsOptions));
 
 app.use(cookieParser());
 app.use(express.json());
@@ -109,5 +83,4 @@ const PORT = process.env.PORT || 5001;
 const server = app.listen(PORT, () => {
   console.log(`🟢 Auth service running on port ${PORT}`);
   console.log(`🌐 Environment: ${process.env.NODE_ENV || "development"}`);
-  console.log(`🔒 CORS enabled for: ${process.env.FRONTEND_URL}`);
 });

@@ -76,8 +76,8 @@ export function proxyRequest(
         "content-type": req.headers["content-type"],
         authorization: req.headers["authorization"],
         cookie: req.headers["cookie"],
-        "x-service-id": req.headers["x-service-id"],
-        "x-service-secret": req.headers["x-service-secret"],
+        "x-service-id": "main-service",
+        "x-service-secret": process.env.MAIN_SERVICE_SECRET,
       };
 
       // If req.user.userId exists, pass userId

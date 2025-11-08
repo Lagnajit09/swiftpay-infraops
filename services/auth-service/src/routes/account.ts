@@ -1,13 +1,8 @@
 import express from "express";
 import { getUserProfile, updateUserDetails } from "../controllers/userAction";
-import {
-  rateLimitConfig,
-  sessionVerificationSchema,
-} from "../utils/validation";
-import { verifyTokenWithSession } from "../middleware/authMiddleware";
+import { rateLimitConfig } from "../utils/validation";
 import rateLimit from "express-rate-limit";
 import { serviceAuthMiddleware } from "../middleware/serviceAuthMiddleware";
-import { validateRequest } from "../middleware/validation";
 
 const router = express.Router();
 

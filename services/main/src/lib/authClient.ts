@@ -1,7 +1,8 @@
 import axios from "axios";
 import "dotenv/config";
 
-const AUTH_SERVICE_URL = process.env.AUTH_SERVICE_URL!;
+const AUTH_SERVICE_URL =
+  process.env.AUTH_SERVICE_URL || "http://localhost:5001";
 
 export async function introspectSession(sessionId: string) {
   try {
