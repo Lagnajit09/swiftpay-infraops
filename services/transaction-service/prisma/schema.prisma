@@ -3,6 +3,80 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Transaction {
+  id              String            @id @default(cuid())
+  userId          String
+  walletId        String
+  merchantId      String?
+  paymentMethodId String?
+  amount          BigInt
+  currency        String            @default("INR")
+  type            TransactionType
+  flow            TransactionFlow
+  status          TransactionStatus @default(PENDING)
+  description     String?
+  referenceId     String? // Links to ledgerEntry if needed
+  metadata        Json?
+  idempotencyKey  String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  paymentMethod PaymentMethod? @relation(fields: [paymentMethodId], references: [id])
+
+  @@unique([walletId, idempotencyKey])
+  @@index([userId])
+  @@index([status])
+  @@map("transactions")
+}
+
+model PaymentMethod {
+  id        String   @id @default(cuid())
+  userId    String
+  type      String // "UPI", "CARD", etc.
+  details   Json? // Use JSON for storing masked card or UPI details
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  transactions Transaction[]
+
+  @@map("payment_methods")
+}
+
+// model Merchant {
+//   id        String   @id @default(cuid())
+//   name      String
+//   category  String?
+//   metadata  Json?
+//   createdAt DateTime @default(now())
+
+//   transactions Transaction[]
+
+//   @@map("merchants")
+// }
+
+enum TransactionStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  CANCELLED
+  REVERSED
+}
+
+enum TransactionType {
+  CREDIT
+  DEBIT
+  REFUND
+  CHARGEBACK
+}
+
+enum TransactionFlow {
+  P2P
+  ACCOUNT_BASED
+  ONRAMP
+  OFFRAMP
 }
