@@ -249,3 +249,17 @@ export const creditDebitRequestSchema = z.object({
     })
     .catchall(z.unknown()),
 });
+
+export const p2pRequestSchema = z.object({
+  body: z.object({
+    amount: z.number().int().positive(), // amount in paise
+    description: z.string().max(200).optional(),
+    referenceId: z.string().max(100).optional(),
+    recipientUserId: z.string().min(1),
+  }),
+  headers: z
+    .object({
+      [idempotencyHeader]: idempotencyKeySchema,
+    })
+    .catchall(z.unknown()),
+});

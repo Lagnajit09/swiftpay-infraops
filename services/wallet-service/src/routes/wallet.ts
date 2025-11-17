@@ -5,6 +5,7 @@ import {
   credit,
   debit,
   getOrCreateMyWallet,
+  p2pTxn,
 } from "../controllers/walletActions";
 
 const router = express.Router();
@@ -26,5 +27,6 @@ router.use(generalLimiter);
 router.get("/", getOrCreateMyWallet);
 router.post("/credit", credit);
 router.post("/debit", debit);
+router.post("/p2p", p2pTxn);
 
 export default router;
