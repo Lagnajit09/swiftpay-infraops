@@ -44,6 +44,3 @@ Thumbs.db
 .cache/
 temp/
 tmp/
-
-# npm
-package-lock.json
