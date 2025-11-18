@@ -12,7 +12,8 @@ interface WalletProxyOptions {
 }
 
 interface WalletResponse {
-  walletId?: string;
+  senderWallet?: string;
+  recipientWallet?: string;
   currency?: string;
   balance?: string;
   status?: string;

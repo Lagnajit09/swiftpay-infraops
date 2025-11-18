@@ -67,6 +67,8 @@ export async function p2pTransaction(req: Request, res: Response) {
         where: { id: transaction.id },
         data: {
           status: "SUCCESS",
+          walletId: `${walletResponse.senderWallet}-${walletResponse.recipientWallet}`,
+          referenceId: walletResponse.ledgerEntryId || null,
           metadata: {
             ...(transaction.metadata as object),
             walletResponse: JSON.parse(JSON.stringify(walletResponse)),

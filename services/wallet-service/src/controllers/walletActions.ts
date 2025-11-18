@@ -335,6 +335,8 @@ export async function p2pTxn(req: Request, res: Response) {
       });
 
       return {
+        senderWallet: senderWallet.id,
+        recipientWallet: recipientWallet.id,
         senderBalance: updatedSender.balance,
         recipientBalance: updatedRecipient.balance,
         debitEntryId: debitEntry.id,
@@ -343,9 +345,11 @@ export async function p2pTxn(req: Request, res: Response) {
     });
 
     return res.status(201).json({
+      senderWallet: result.senderWallet,
+      recipientWallet: result.recipientWallet,
       senderBalance: result.senderBalance.toString(),
       recipientBalance: result.recipientBalance.toString(),
-      ledgerEntryId: result.debitEntryId,
+      ledgerEntryId: `${result.debitEntryId}-${result.creditEntryId}`,
       message: "P2P transfer successful",
     });
   } catch (error: any) {
