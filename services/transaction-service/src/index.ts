@@ -1,6 +1,7 @@
 import express, { Request, Response } from "express";
 import cors from "cors";
 import dotenv from "dotenv";
+import transactionRouter from "./routes/transaction";
 
 dotenv.config();
 
@@ -9,6 +10,8 @@ const PORT = process.env.PORT || 5003;
 
 app.use(cors());
 app.use(express.json());
+
+app.use("/api/transaction", transactionRouter);
 
 app.get("/", (req: Request, res: Response) => {
   res.json({ message: "Welcome to transaction-service!" });
