@@ -12,7 +12,6 @@ model Transaction {
   id              String            @id @default(cuid())
   userId          String
   walletId        String
-  merchantId      String?
   paymentMethodId String?
   amount          BigInt
   currency        String            @default("INR")
@@ -46,18 +45,6 @@ model PaymentMethod {
 
   @@map("payment_methods")
 }
-
-// model Merchant {
-//   id        String   @id @default(cuid())
-//   name      String
-//   category  String?
-//   metadata  Json?
-//   createdAt DateTime @default(now())
-
-//   transactions Transaction[]
-
-//   @@map("merchants")
-// }
 
 enum TransactionStatus {
   PENDING
