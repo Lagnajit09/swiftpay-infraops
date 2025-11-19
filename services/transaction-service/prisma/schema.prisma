@@ -20,6 +20,7 @@ model Transaction {
   status          TransactionStatus @default(PENDING)
   description     String?
   referenceId     String? // Links to ledgerEntry if needed
+  relatedTxnId    String? // Links to related-transaction record for P2P transfer
   metadata        Json?
   idempotencyKey  String?
   createdAt       DateTime          @default(now())
