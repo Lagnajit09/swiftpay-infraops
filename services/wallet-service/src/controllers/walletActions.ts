@@ -257,7 +257,12 @@ export async function p2pTxn(req: Request, res: Response) {
 
     const sanitizedAmount = sanitizeInput.amount(amount);
     const sanitizedDesc = sanitizeInput.description(description);
-    const sanitizedRefId = sanitizeInput.referenceId(referenceId);
+    const sanitizedDebitRefId = sanitizeInput.referenceId(
+      referenceId.debitReferenceId
+    );
+    const sanitizedCreditRefId = sanitizeInput.referenceId(
+      referenceId.creditReferenceId
+    );
 
     // Validation
     if (BigInt(sanitizedAmount) <= 0) {
@@ -302,7 +307,7 @@ export async function p2pTxn(req: Request, res: Response) {
           type: "DEBIT",
           amount: BigInt(sanitizedAmount),
           description: sanitizedDesc || `P2P transfer to ${recipientUserId}`,
-          referenceId: sanitizedRefId,
+          referenceId: sanitizedDebitRefId,
           idempotencyKey: idemKey,
         },
       });
@@ -322,7 +327,7 @@ export async function p2pTxn(req: Request, res: Response) {
           type: "CREDIT",
           amount: BigInt(sanitizedAmount),
           description: sanitizedDesc || `P2P transfer from ${senderUserId}`,
-          referenceId: sanitizedRefId,
+          referenceId: sanitizedCreditRefId,
         },
       });
 
@@ -349,7 +354,10 @@ export async function p2pTxn(req: Request, res: Response) {
       recipientWallet: result.recipientWallet,
       senderBalance: result.senderBalance.toString(),
       recipientBalance: result.recipientBalance.toString(),
-      ledgerEntryId: `${result.debitEntryId}-${result.creditEntryId}`,
+      ledgerEntryId: {
+        debitLedgerEntryId: result.debitEntryId,
+        creditLedgerEntryId: result.creditEntryId,
+      },
       message: "P2P transfer successful",
     });
   } catch (error: any) {

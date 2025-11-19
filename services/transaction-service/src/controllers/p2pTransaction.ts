@@ -32,8 +32,8 @@ export async function p2pTransaction(req: Request, res: Response) {
       return res.status(400).json({ error: "Cannot transfer to yourself" });
     }
 
-    // Start database transaction for creating transaction record
-    const transaction = await prisma.transaction.create({
+    // Start database transaction for creating debit transaction record of the sender
+    const debitTransaction = await prisma.transaction.create({
       data: {
         userId: String(userId),
         walletId: `temp-${userId}`, // Will be updated after wallet call
@@ -51,6 +51,25 @@ export async function p2pTransaction(req: Request, res: Response) {
       },
     });
 
+    // Start database transaction for creating credit transaction record of the receiver
+    const creditTransaction = await prisma.transaction.create({
+      data: {
+        userId: String(recipientUserId),
+        walletId: `temp-${recipientUserId}`, // Will be updated after wallet call
+        amount: BigInt(sanitizedAmount),
+        currency: "INR",
+        type: "CREDIT",
+        flow: "P2P",
+        status: "PENDING",
+        description: sanitizedDesc,
+        paymentMethodId: paymentMethodId || null,
+        idempotencyKey: idemKey,
+        metadata: {
+          senderUserId: String(userId),
+        },
+      },
+    });
+
     try {
       // Call wallet service to execute P2P transfer
       const walletResponse = await p2pTransfer({
@@ -59,18 +78,40 @@ export async function p2pTransaction(req: Request, res: Response) {
         amount: sanitizedAmount,
         description: sanitizedDesc,
         idempotencyKey: idemKey,
-        referenceId: transaction.id,
+        debitReferenceId: debitTransaction.id,
+        creditReferenceId: creditTransaction.id,
       });
 
       // Update transaction status to SUCCESS
-      const updatedTransaction = await prisma.transaction.update({
-        where: { id: transaction.id },
+      const updatedDebitTransaction = await prisma.transaction.update({
+        where: { id: debitTransaction.id },
         data: {
           status: "SUCCESS",
-          walletId: `${walletResponse.senderWallet}-${walletResponse.recipientWallet}`,
-          referenceId: walletResponse.ledgerEntryId || null,
+          walletId: walletResponse.senderWallet,
+          referenceId:
+            typeof walletResponse.ledgerEntryId !== "string"
+              ? walletResponse.ledgerEntryId?.debitLedgerEntryId || null
+              : null,
+          relatedTxnId: creditTransaction.id,
           metadata: {
-            ...(transaction.metadata as object),
+            ...(debitTransaction.metadata as object),
+            walletResponse: JSON.parse(JSON.stringify(walletResponse)),
+            completedAt: new Date().toISOString(),
+          },
+        },
+      });
+      const updatedCreditTransaction = await prisma.transaction.update({
+        where: { id: creditTransaction.id },
+        data: {
+          status: "SUCCESS",
+          walletId: walletResponse.recipientWallet,
+          referenceId:
+            typeof walletResponse.ledgerEntryId !== "string"
+              ? walletResponse.ledgerEntryId?.creditLedgerEntryId || null
+              : null,
+          relatedTxnId: debitTransaction.id,
+          metadata: {
+            ...(creditTransaction.metadata as object),
             walletResponse: JSON.parse(JSON.stringify(walletResponse)),
             completedAt: new Date().toISOString(),
           },
@@ -78,21 +119,35 @@ export async function p2pTransaction(req: Request, res: Response) {
       });
 
       return res.status(201).json({
-        transactionId: updatedTransaction.id,
-        status: updatedTransaction.status,
-        amount: updatedTransaction.amount.toString(),
-        currency: updatedTransaction.currency,
+        transactionId: {
+          debit_transaction: debitTransaction.id,
+          credit_transaction: creditTransaction.id,
+        },
+        status: updatedDebitTransaction.status,
+        amount: debitTransaction.amount.toString(),
+        currency: debitTransaction.currency,
         senderBalance: walletResponse.senderBalance,
         message: "P2P transfer successful",
       });
     } catch (walletError: any) {
       // Update transaction status to FAILED
       await prisma.transaction.update({
-        where: { id: transaction.id },
+        where: { id: debitTransaction.id },
         data: {
           status: "FAILED",
           metadata: {
-            ...(transaction.metadata as object),
+            ...(debitTransaction.metadata as object),
+            error: walletError.message,
+            failedAt: new Date().toISOString(),
+          },
+        },
+      });
+      await prisma.transaction.update({
+        where: { id: creditTransaction.id },
+        data: {
+          status: "FAILED",
+          metadata: {
+            ...(creditTransaction.metadata as object),
             error: walletError.message,
             failedAt: new Date().toISOString(),
           },
@@ -102,7 +157,7 @@ export async function p2pTransaction(req: Request, res: Response) {
       // Return wallet service error
       return res.status(walletError.statusCode || 500).json({
         error: walletError.message || "P2P transfer failed",
-        transactionId: transaction.id,
+        transactionId: debitTransaction.id,
       });
     }
   } catch (error: any) {

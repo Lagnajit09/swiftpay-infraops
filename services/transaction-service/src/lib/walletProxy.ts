@@ -17,7 +17,12 @@ interface WalletResponse {
   currency?: string;
   balance?: string;
   status?: string;
-  ledgerEntryId?: string;
+  ledgerEntryId?:
+    | string
+    | {
+        debitLedgerEntryId: string;
+        creditLedgerEntryId: string;
+      };
   senderBalance?: string;
   recipientBalance?: string;
   message?: string;
@@ -32,7 +37,8 @@ export async function p2pTransfer(
     recipientUserId: string;
     amount: string | number;
     description?: string;
-    referenceId?: string;
+    debitReferenceId?: string;
+    creditReferenceId?: string;
   }
 ): Promise<WalletResponse> {
   try {
@@ -55,7 +61,10 @@ export async function p2pTransfer(
         recipientUserId: options.recipientUserId,
         amount: options.amount,
         description: options.description,
-        referenceId: options.referenceId,
+        referenceId: {
+          debitReferenceId: options.debitReferenceId,
+          creditReferenceId: options.creditReferenceId,
+        },
       },
       {
         headers,
