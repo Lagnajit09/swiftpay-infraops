@@ -1,0 +1,12 @@
+{
+  "name": "swiftpay-services-orchestrator",
+  "version": "1.0.0",
+  "description": "Root script to manage microservices",
+  "scripts": {
+    "start-local-server": "node start-services.js",
+    "start": "node start-services.js"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
