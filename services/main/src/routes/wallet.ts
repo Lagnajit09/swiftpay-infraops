@@ -38,11 +38,11 @@ router.post(
   validateRequest(creditDebitRequestSchema),
   proxyRequest("post", "/api/wallet/debit", { service: "wallet" })
 );
-router.post(
-  "/p2p",
-  transactionLimiter,
-  validateRequest(p2pRequestSchema),
-  proxyRequest("post", "/api/wallet/p2p", { service: "wallet" })
-);
+// router.post(
+//   "/p2p",
+//   transactionLimiter,
+//   validateRequest(p2pRequestSchema),
+//   proxyRequest("post", "/api/wallet/p2p", { service: "wallet" })
+// );
 
 export default router;

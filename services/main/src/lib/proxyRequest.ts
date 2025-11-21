@@ -8,6 +8,7 @@ type HttpMethod = "get" | "post" | "put" | "delete";
 const SERVICE_URLS: Record<string, string> = {
   auth: process.env.AUTH_SERVICE_URL || "http://localhost:5001",
   wallet: process.env.WALLET_SERVICE_URL || "http://localhost:5002",
+  transaction: process.env.TRANSACTION_SERVICE_URL || "http://localhost:5003",
   // Add more services here as needed
   // payment: process.env.PAYMENT_SERVICE_URL || "http://localhost:5003",
   // notification: process.env.NOTIFICATION_SERVICE_URL || "http://localhost:5004",
