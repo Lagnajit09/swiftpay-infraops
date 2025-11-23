@@ -379,6 +379,9 @@ export async function p2pTxn(req: Request, res: Response) {
     if (msg === "SENDER_WALLET_NOT_FOUND") {
       return res.status(404).json({ error: "Sender wallet not found" });
     }
+    if (msg === "RECIPIENT_WALLET_NOT_FOUND") {
+      return res.status(404).json({ error: "Recipient wallet not found" });
+    }
     if (msg === "SENDER_WALLET_NOT_ACTIVE") {
       return res.status(403).json({ error: "Sender wallet is not active" });
     }
