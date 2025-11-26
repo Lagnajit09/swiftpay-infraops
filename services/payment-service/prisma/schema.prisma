@@ -4,5 +4,73 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider  = "postgresql"
+}
+
+model Payment {
+  id                String       @id @default(cuid())
+  userId            String
+  walletId          String      
+  paymentMethodId   String?
+  amount            BigInt
+  currency          String       @default("INR")
+  status            PaymentStatus @default(PENDING)
+  type              PaymentType
+  transactionId     String?     
+  gatewayReference  String?     
+  metadata          Json?
+  idempotencyKey    String?
+
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  paymentAttempts   PaymentAttempt[]
+
+  @@unique([walletId, idempotencyKey])
+  @@index([userId])
+  @@index([status])
+  @@map("payments")
+}
+
+model PaymentAttempt {
+  id             String      @id @default(cuid())
+  paymentId      String
+  gateway        String      // e.g., Stripe, PayPal, BankXYZ
+  status         AttemptStatus
+  rawRequest     Json?       // Raw request sent to gateway
+  rawResponse    Json?       // Raw response received from gateway
+  errorCode      String?
+  errorMessage   String?
+  attemptNumber  Int         @default(1)
+  createdAt      DateTime    @default(now())
+
+  payment        Payment     @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+
+  @@index([paymentId])
+  @@index([status])
+  @@map("payment_attempts")
+}
+
+// Enums for statuses and types
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  CANCELLED
+  REFUNDED
+}
+
+enum PaymentType {
+  ONRAMP
+  OFFRAMP
+  P2P
+  SUBSCRIPTION
+}
+
+enum AttemptStatus {
+  INITIATED
+  SUCCESS
+  FAILED
+  RETRYING
 }
