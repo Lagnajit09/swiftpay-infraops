@@ -3,6 +3,7 @@ import { PaymentStatus, PaymentType, AttemptStatus } from "@prisma/client";
 import prisma from "../lib/db";
 import { processBankOnRamp, processBankOffRamp } from "../lib/bankReq";
 import { OffRampRequestBody, OnRampRequestBody } from "../types/types";
+import { idempotencyHeader, sanitizeInput } from "../utils/validation";
 
 /**
  * Controller for handling on-ramp (money in) payments
@@ -18,14 +19,55 @@ export async function handleOnRamp(req: Request, res: Response) {
       currency = "INR",
       accountDetails,
       metadata,
-      idempotencyKey,
     } = req.body as OnRampRequestBody;
     const userId: string =
       req.user?.userId || (req.headers["x-user-id"] as string);
-    // const idempotencyKey = req.header(idempotencyHeader) || undefined;
+    const idempotencyKey = req.header(idempotencyHeader) || undefined;
+
+    // Sanitize input parameters
+    const sanitizedUserId = sanitizeInput.id(userId);
+    const sanitizedWalletId = sanitizeInput.id(walletId);
+    const sanitizedTransactionId = transactionId
+      ? sanitizeInput.id(transactionId)
+      : undefined;
+    const sanitizedPaymentMethodId = paymentMethodId
+      ? sanitizeInput.id(paymentMethodId)
+      : undefined;
+    const sanitizedAmount = parseFloat(sanitizeInput.amount(amount));
+    const sanitizedCurrency = sanitizeInput.currencyCode(currency);
+    const sanitizedIdempotencyKey = idempotencyKey
+      ? sanitizeInput.referenceId(idempotencyKey)
+      : undefined;
+
+    // Sanitize account details
+    const sanitizedAccountDetails = {
+      accountNumber: accountDetails?.accountNumber
+        ? sanitizeInput.accountNumber(accountDetails.accountNumber)
+        : undefined,
+      ifsc: accountDetails?.ifsc
+        ? sanitizeInput.ifscCode(accountDetails.ifsc)
+        : undefined,
+      upiId: accountDetails?.upiId
+        ? sanitizeInput.upiId(accountDetails.upiId)
+        : undefined,
+      bankName: accountDetails?.bankName
+        ? sanitizeInput.bankName(accountDetails.bankName)
+        : undefined,
+    };
+
+    // Sanitize metadata
+    const sanitizedMetadata = metadata
+      ? sanitizeInput.metadata(metadata)
+      : undefined;
 
     // Validation
-    if (!userId || !walletId || !amount || amount <= 0) {
+    if (
+      !sanitizedUserId ||
+      !sanitizedWalletId ||
+      !sanitizedAmount ||
+      isNaN(sanitizedAmount) ||
+      sanitizedAmount <= 0
+    ) {
       return res.status(400).json({
         success: false,
         error: "Invalid request parameters",
@@ -34,8 +76,8 @@ export async function handleOnRamp(req: Request, res: Response) {
     }
 
     if (
-      !accountDetails ||
-      (!accountDetails.accountNumber && !accountDetails.upiId)
+      !sanitizedAccountDetails ||
+      (!sanitizedAccountDetails.accountNumber && !sanitizedAccountDetails.upiId)
     ) {
       return res.status(400).json({
         success: false,
@@ -45,12 +87,12 @@ export async function handleOnRamp(req: Request, res: Response) {
     }
 
     // Check for duplicate request using idempotency key
-    if (idempotencyKey) {
+    if (sanitizedIdempotencyKey) {
       const existingPayment = await prisma.payment.findUnique({
         where: {
           walletId_idempotencyKey: {
-            walletId,
-            idempotencyKey,
+            walletId: sanitizedWalletId,
+            idempotencyKey: sanitizedIdempotencyKey,
           },
         },
       });
@@ -70,16 +112,16 @@ export async function handleOnRamp(req: Request, res: Response) {
     // Create payment record
     const payment = await prisma.payment.create({
       data: {
-        userId,
-        walletId,
-        transactionId,
-        paymentMethodId,
-        amount: BigInt(amount),
-        currency,
+        userId: sanitizedUserId,
+        walletId: sanitizedWalletId,
+        transactionId: sanitizedTransactionId,
+        paymentMethodId: sanitizedPaymentMethodId,
+        amount: BigInt(sanitizedAmount),
+        currency: sanitizedCurrency,
         status: PaymentStatus.PENDING,
         type: PaymentType.ONRAMP,
-        metadata: metadata || {},
-        idempotencyKey,
+        metadata: sanitizedMetadata || {},
+        idempotencyKey: sanitizedIdempotencyKey,
       },
     });
 
@@ -87,15 +129,15 @@ export async function handleOnRamp(req: Request, res: Response) {
     const attempt = await prisma.paymentAttempt.create({
       data: {
         paymentId: payment.id,
-        gateway: accountDetails.bankName || "DEMO_BANK",
+        gateway: sanitizedAccountDetails.bankName || "DEMO_BANK",
         status: AttemptStatus.INITIATED,
         attemptNumber: 1,
         rawRequest: {
-          userId,
-          walletId,
-          amount,
-          currency,
-          accountDetails,
+          userId: sanitizedUserId,
+          walletId: sanitizedWalletId,
+          amount: sanitizedAmount,
+          currency: sanitizedCurrency,
+          accountDetails: sanitizedAccountDetails,
           timestamp: new Date().toISOString(),
         },
       },
@@ -103,12 +145,12 @@ export async function handleOnRamp(req: Request, res: Response) {
 
     // Process bank request
     const bankResponse = await processBankOnRamp({
-      amount: BigInt(amount),
-      currency,
-      accountDetails,
+      amount: BigInt(sanitizedAmount),
+      currency: sanitizedCurrency,
+      accountDetails: sanitizedAccountDetails,
       transactionType: "ONRAMP",
-      userId,
-      walletId,
+      userId: sanitizedUserId,
+      walletId: sanitizedWalletId,
     });
 
     // Update payment attempt with response
@@ -177,14 +219,55 @@ export async function handleOffRamp(req: Request, res: Response) {
       currency = "INR",
       accountDetails,
       metadata,
-      idempotencyKey,
     } = req.body as OffRampRequestBody;
     const userId: string =
       req.user?.userId || (req.headers["x-user-id"] as string);
-    // const idempotencyKey = req.header(idempotencyHeader) || undefined;
+    const idempotencyKey = req.header(idempotencyHeader) || undefined;
+
+    // Sanitize input parameters
+    const sanitizedUserId = sanitizeInput.id(userId);
+    const sanitizedWalletId = sanitizeInput.id(walletId);
+    const sanitizedTransactionId = transactionId
+      ? sanitizeInput.id(transactionId)
+      : undefined;
+    const sanitizedPaymentMethodId = paymentMethodId
+      ? sanitizeInput.id(paymentMethodId)
+      : undefined;
+    const sanitizedAmount = parseFloat(sanitizeInput.amount(amount));
+    const sanitizedCurrency = sanitizeInput.currencyCode(currency);
+    const sanitizedIdempotencyKey = idempotencyKey
+      ? sanitizeInput.referenceId(idempotencyKey)
+      : undefined;
+
+    // Sanitize account details
+    const sanitizedAccountDetails = {
+      accountNumber: accountDetails?.accountNumber
+        ? sanitizeInput.accountNumber(accountDetails.accountNumber)
+        : undefined,
+      ifsc: accountDetails?.ifsc
+        ? sanitizeInput.ifscCode(accountDetails.ifsc)
+        : undefined,
+      upiId: accountDetails?.upiId
+        ? sanitizeInput.upiId(accountDetails.upiId)
+        : undefined,
+      bankName: accountDetails?.bankName
+        ? sanitizeInput.bankName(accountDetails.bankName)
+        : undefined,
+    };
+
+    // Sanitize metadata
+    const sanitizedMetadata = metadata
+      ? sanitizeInput.metadata(metadata)
+      : undefined;
 
     // Validation
-    if (!userId || !walletId || !amount || amount <= 0) {
+    if (
+      !sanitizedUserId ||
+      !sanitizedWalletId ||
+      !sanitizedAmount ||
+      isNaN(sanitizedAmount) ||
+      sanitizedAmount <= 0
+    ) {
       return res.status(400).json({
         success: false,
         error: "Invalid request parameters",
@@ -193,8 +276,8 @@ export async function handleOffRamp(req: Request, res: Response) {
     }
 
     if (
-      !accountDetails ||
-      (!accountDetails.accountNumber && !accountDetails.upiId)
+      !sanitizedAccountDetails ||
+      (!sanitizedAccountDetails.accountNumber && !sanitizedAccountDetails.upiId)
     ) {
       return res.status(400).json({
         success: false,
@@ -204,12 +287,12 @@ export async function handleOffRamp(req: Request, res: Response) {
     }
 
     // Check for duplicate request using idempotency key
-    if (idempotencyKey) {
+    if (sanitizedIdempotencyKey) {
       const existingPayment = await prisma.payment.findUnique({
         where: {
           walletId_idempotencyKey: {
-            walletId,
-            idempotencyKey,
+            walletId: sanitizedWalletId,
+            idempotencyKey: sanitizedIdempotencyKey,
           },
         },
       });
@@ -229,16 +312,16 @@ export async function handleOffRamp(req: Request, res: Response) {
     // Create payment record
     const payment = await prisma.payment.create({
       data: {
-        userId,
-        walletId,
-        transactionId,
-        paymentMethodId,
-        amount: BigInt(amount),
-        currency,
+        userId: sanitizedUserId,
+        walletId: sanitizedWalletId,
+        transactionId: sanitizedTransactionId,
+        paymentMethodId: sanitizedPaymentMethodId,
+        amount: BigInt(sanitizedAmount),
+        currency: sanitizedCurrency,
         status: PaymentStatus.PENDING,
         type: PaymentType.OFFRAMP,
-        metadata: metadata || {},
-        idempotencyKey,
+        metadata: sanitizedMetadata || {},
+        idempotencyKey: sanitizedIdempotencyKey,
       },
     });
 
@@ -246,15 +329,15 @@ export async function handleOffRamp(req: Request, res: Response) {
     const attempt = await prisma.paymentAttempt.create({
       data: {
         paymentId: payment.id,
-        gateway: accountDetails.bankName || "DEMO_BANK",
+        gateway: sanitizedAccountDetails.bankName || "DEMO_BANK",
         status: AttemptStatus.INITIATED,
         attemptNumber: 1,
         rawRequest: {
-          userId,
-          walletId,
-          amount,
-          currency,
-          accountDetails,
+          userId: sanitizedUserId,
+          walletId: sanitizedWalletId,
+          amount: sanitizedAmount,
+          currency: sanitizedCurrency,
+          accountDetails: sanitizedAccountDetails,
           timestamp: new Date().toISOString(),
         },
       },
@@ -262,12 +345,12 @@ export async function handleOffRamp(req: Request, res: Response) {
 
     // Process bank request
     const bankResponse = await processBankOffRamp({
-      amount: BigInt(amount),
-      currency,
-      accountDetails,
+      amount: BigInt(sanitizedAmount),
+      currency: sanitizedCurrency,
+      accountDetails: sanitizedAccountDetails,
       transactionType: "OFFRAMP",
-      userId,
-      walletId,
+      userId: sanitizedUserId,
+      walletId: sanitizedWalletId,
     });
 
     // Update payment attempt with response
