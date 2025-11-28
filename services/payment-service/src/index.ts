@@ -1,23 +1,64 @@
-import express, { Request, Response } from 'express';
-import cors from 'cors';
-import dotenv from 'dotenv';
+import express from "express";
+import dotenv from "dotenv";
+import cookieParser from "cookie-parser";
+import paymentRoutes from "./routes/payment";
 
 dotenv.config();
 
-const app = express();
-const PORT = process.env.PORT || 3000;
+// Validate required environment variables
+const requiredEnvVars = ["FRONTEND_URL", "DATABASE_URL", "DIRECT_URL"];
 
-app.use(cors());
+for (const envVar of requiredEnvVars) {
+  if (!process.env[envVar]) {
+    console.error(`❌ Missing required environment variable: ${envVar}`);
+    process.exit(1);
+  }
+}
+
+const app = express();
+
+app.use(cookieParser());
 app.use(express.json());
 
-app.get('/', (req: Request, res: Response) => {
-  res.json({ message: 'Welcome to payment-service!' });
+app.use("/api/payment/", paymentRoutes);
+
+// Health check endpoint
+app.get("/", (req, res) => {
+  res.status(200).json({
+    service: "Payment Service",
+    status: "running",
+    timestamp: new Date().toISOString(),
+    version: "1.0.0",
+  });
 });
 
-app.get('/health', (req: Request, res: Response) => {
-  res.json({ status: 'healthy', timestamp: new Date().toISOString() });
+// Health check for load balancers
+app.get("/health", (req, res) => {
+  res.status(200).json({ status: "healthy" });
 });
 
-app.listen(PORT, () => {
-  console.log(`🚀 Server is running on port ${PORT}`);
+// Global error handler
+app.use(
+  (
+    err: any,
+    req: express.Request,
+    res: express.Response,
+    next: express.NextFunction
+  ) => {
+    console.error("Global error:", err);
+
+    // Don't leak error details in production
+    const isDevelopment = process.env.NODE_ENV === "development";
+
+    res.status(err.status || 500).json({
+      message: "Internal server error",
+      ...(isDevelopment && { error: err.message, stack: err.stack }),
+    });
+  }
+);
+
+const PORT = process.env.PORT || 5004;
+const server = app.listen(PORT, () => {
+  console.log(`🟢 Payment service running on port ${PORT}`);
+  console.log(`🌍 Environment: ${process.env.NODE_ENV || "development"}`);
 });

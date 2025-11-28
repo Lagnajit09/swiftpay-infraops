@@ -20,3 +20,37 @@ export interface BankResponse {
   errorMessage?: string;
   rawResponse?: any;
 }
+
+export interface OnRampRequestBody {
+  userId: string;
+  walletId: string;
+  transactionId: string;
+  paymentMethodId?: string;
+  amount: number; // in smallest currency unit (e.g., paise for INR)
+  currency?: string;
+  accountDetails: {
+    accountNumber?: string;
+    ifsc?: string;
+    upiId?: string;
+    bankName?: string;
+  };
+  metadata?: any;
+  idempotencyKey?: string;
+}
+
+export interface OffRampRequestBody {
+  userId: string;
+  walletId: string;
+  transactionId: string;
+  paymentMethodId?: string;
+  amount: number;
+  currency?: string;
+  accountDetails: {
+    accountNumber?: string;
+    ifsc?: string;
+    upiId?: string;
+    bankName?: string;
+  };
+  metadata?: any;
+  idempotencyKey?: string;
+}
