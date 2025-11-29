@@ -22,7 +22,6 @@ export interface BankResponse {
 }
 
 export interface OnRampRequestBody {
-  userId: string;
   walletId: string;
   transactionId: string;
   paymentMethodId?: string;
@@ -35,15 +34,13 @@ export interface OnRampRequestBody {
     bankName?: string;
   };
   metadata?: any;
-  idempotencyKey?: string;
 }
 
 export interface OffRampRequestBody {
-  userId: string;
   walletId: string;
   transactionId: string;
   paymentMethodId?: string;
-  amount: number;
+  amount: number; // in smallest currency unit (e.g., paise for INR)
   currency?: string;
   accountDetails: {
     accountNumber?: string;
@@ -52,5 +49,4 @@ export interface OffRampRequestBody {
     bankName?: string;
   };
   metadata?: any;
-  idempotencyKey?: string;
 }

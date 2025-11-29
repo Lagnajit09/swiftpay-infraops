@@ -9,7 +9,10 @@ export default defineConfig({
     path: "prisma/migrations",
   },
   datasource: {
-    url: process.env.DATABASE_URL!,
-    shadowDatabaseUrl: process.env.DIRECT_URL!,
+    // Use DIRECT_URL for migrations (Prisma CLI uses this url)
+    // Remove pgbouncer param as it's not compatible with direct connections
+    url:
+      process.env.DIRECT_URL?.replace("&pgbouncer=true", "") ||
+      process.env.DATABASE_URL!,
   },
 });

@@ -10,6 +10,7 @@ export async function credit(req: Request, res: Response) {
 
     if (!userId) {
       return res.status(404).json({
+        success: false,
         error: "User not found!",
         description: `user with userId: ${userId} not found.`,
       });
@@ -20,7 +21,10 @@ export async function credit(req: Request, res: Response) {
     const sanitizedRefId = sanitizeInput.referenceId(referenceId);
 
     if (BigInt(sanitizedAmount) <= 0) {
-      return res.status(400).json({ error: "Amount must be positive" });
+      return res.status(400).json({
+        success: false,
+        error: "Amount must be positive",
+      });
     }
 
     const result = await prisma.$transaction(async (tx: any) => {
@@ -56,6 +60,8 @@ export async function credit(req: Request, res: Response) {
     });
 
     return res.status(201).json({
+      success: true,
+      walletId: result.updated.id,
       balance: result.updated.balance.toString(),
       ledgerEntryId: result.entry.id,
     });
@@ -68,20 +74,25 @@ export async function credit(req: Request, res: Response) {
     if (msg.includes("Unique constraint") || msg.includes("idempotency")) {
       return res
         .status(200)
-        .json({ message: "Duplicate ignored (idempotent)" });
+        .json({ success: true, message: "Duplicate ignored (idempotent)" });
     }
     if (msg === "WALLET_NOT_FOUND") {
-      return res.status(404).json({ error: "Wallet not found" });
+      return res
+        .status(404)
+        .json({ success: false, error: "Wallet not found" });
     }
     if (msg === "WALLET_NOT_ACTIVE") {
-      return res.status(403).json({ error: "Wallet is not active" });
+      return res
+        .status(403)
+        .json({ success: false, error: "Wallet is not active" });
     }
 
     // Database connection errors
     if (error.code === "P1001" || error.code === "P1017") {
-      return res
-        .status(503)
-        .json({ error: "Database connection failed. Please try again later." });
+      return res.status(503).json({
+        success: false,
+        error: "Database connection failed. Please try again later.",
+      });
     }
 
     // Transaction timeout or deadlock
@@ -90,16 +101,21 @@ export async function credit(req: Request, res: Response) {
       msg.includes("timeout") ||
       msg.includes("deadlock")
     ) {
-      return res
-        .status(409)
-        .json({ error: "Transaction conflict. Please try again." });
+      return res.status(409).json({
+        success: false,
+        error: "Transaction conflict. Please try again.",
+      });
     }
 
     // Database constraint errors
     if (error.code?.startsWith("P2")) {
-      return res.status(400).json({ error: "Invalid credit operation" });
+      return res
+        .status(400)
+        .json({ success: false, error: "Invalid credit operation" });
     }
 
-    return res.status(500).json({ error: "Credit operation failed" });
+    return res
+      .status(500)
+      .json({ success: false, error: "Credit operation failed" });
   }
 }

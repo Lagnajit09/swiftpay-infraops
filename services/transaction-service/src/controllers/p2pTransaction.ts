@@ -88,7 +88,7 @@ export async function p2pTransaction(req: Request, res: Response) {
         data: {
           status: "SUCCESS",
           walletId: walletResponse.senderWallet,
-          referenceId:
+          ledgerReferenceId:
             typeof walletResponse.ledgerEntryId !== "string"
               ? walletResponse.ledgerEntryId?.debitLedgerEntryId || null
               : null,
@@ -105,7 +105,7 @@ export async function p2pTransaction(req: Request, res: Response) {
         data: {
           status: "SUCCESS",
           walletId: walletResponse.recipientWallet,
-          referenceId:
+          ledgerReferenceId:
             typeof walletResponse.ledgerEntryId !== "string"
               ? walletResponse.ledgerEntryId?.creditLedgerEntryId || null
               : null,
