@@ -17,7 +17,8 @@ model Transaction {
   flow            TransactionFlow
   status          TransactionStatus @default(PENDING)
   description     String?
-  referenceId     String? // Links to ledgerEntry if needed
+  ledgerReferenceId     String? // Links to ledgerEntry if needed
+  paymentReferenceId    String? // Links to payment reference if needed
   relatedTxnId    String? // Links to related-transaction record for P2P transfer
   metadata        Json?
   idempotencyKey  String?
