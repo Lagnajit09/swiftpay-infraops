@@ -1,12 +1,10 @@
 import express from "express";
 import rateLimit from "express-rate-limit";
 import { rateLimitConfig } from "../utils/validation";
-import {
-  credit,
-  debit,
-  getOrCreateMyWallet,
-  p2pTxn,
-} from "../controllers/walletActions";
+import { getOrCreateMyWallet } from "../controllers/walletActions";
+import { p2pTxn } from "../controllers/p2pTransaction";
+import { credit } from "../controllers/credit";
+import { debit } from "../controllers/debit";
 
 const router = express.Router();
 

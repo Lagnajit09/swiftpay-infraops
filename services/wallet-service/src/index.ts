@@ -6,12 +6,7 @@ import walletRoutes from "./routes/wallet";
 dotenv.config();
 
 // Validate required environment variables
-const requiredEnvVars = [
-  "FRONTEND_URL",
-  "DATABASE_URL",
-  "DIRECT_URL",
-  "REDIS_URL",
-];
+const requiredEnvVars = ["FRONTEND_URL", "DATABASE_URL", "DIRECT_URL"];
 
 for (const envVar of requiredEnvVars) {
   if (!process.env[envVar]) {
