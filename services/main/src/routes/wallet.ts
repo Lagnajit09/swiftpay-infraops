@@ -26,18 +26,18 @@ router.get(
   generalLimiter,
   proxyRequest("get", "/api/wallet/", { service: "wallet" })
 );
-router.post(
-  "/credit",
-  depositLimiter,
-  validateRequest(creditDebitRequestSchema),
-  proxyRequest("post", "/api/wallet/credit", { service: "wallet" })
-);
-router.post(
-  "/debit",
-  withdrawLimiter,
-  validateRequest(creditDebitRequestSchema),
-  proxyRequest("post", "/api/wallet/debit", { service: "wallet" })
-);
+// router.post(
+//   "/credit",
+//   depositLimiter,
+//   validateRequest(creditDebitRequestSchema),
+//   proxyRequest("post", "/api/wallet/credit", { service: "wallet" })
+// );
+// router.post(
+//   "/debit",
+//   withdrawLimiter,
+//   validateRequest(creditDebitRequestSchema),
+//   proxyRequest("post", "/api/wallet/debit", { service: "wallet" })
+// );
 // router.post(
 //   "/p2p",
 //   transactionLimiter,

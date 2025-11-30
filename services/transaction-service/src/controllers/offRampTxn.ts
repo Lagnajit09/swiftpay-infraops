@@ -94,7 +94,15 @@ export async function offRampTransaction(req: Request, res: Response) {
           sanitizedAmount,
           sanitizedDesc || "Off-ramp withdrawal",
           transaction.id,
-          idemKey
+          idemKey,
+          {
+            paymentId: paymentResponse.payment.id,
+            transactionId: transaction.id,
+            paymentMethodId: paymentMethodId,
+            accountDetails: accountDetails,
+            transactionType: "DEBIT",
+            flow: "OFFRAMP",
+          }
         );
       } catch (walletError: any) {
         // If wallet debit fails after payment success, mark as PENDING_RECONCILIATION

@@ -72,10 +72,11 @@ export const rateLimitConfig = {
   },
 
   // Transaction operations - restrictive
-  transaction: {
+  p2pTransaction: {
     windowMs: 15 * 60 * 1000, // 15 minutes
     max: 20,
-    message: "Too many transaction attempts. Please try again in 15 minutes.",
+    message:
+      "Too many P2P transaction attempts. Please try again in 15 minutes.",
     standardHeaders: true,
     legacyHeaders: false,
     keyGenerator: (req: any) =>
@@ -83,21 +84,10 @@ export const rateLimitConfig = {
   },
 
   // Withdraw operations - moderate
-  withdraw: {
+  bankTransfer: {
     windowMs: 30 * 60 * 1000, // 30 minutes
     max: 20,
-    message: "Too many withdrawal attempts. Please try again in 30 minutes.",
-    standardHeaders: true,
-    legacyHeaders: false,
-    keyGenerator: (req: any) =>
-      `${ipKeyGenerator(req.ip)}-${req.user?.userId || "unknown"}`,
-  },
-
-  // Deposit operations - moderate
-  deposit: {
-    windowMs: 30 * 60 * 1000, // 30 minutes
-    max: 25,
-    message: "Too many deposit attempts. Please try again in 30 minutes.",
+    message: "Too many bank transfer attempts. Please try again in 30 minutes.",
     standardHeaders: true,
     legacyHeaders: false,
     keyGenerator: (req: any) =>

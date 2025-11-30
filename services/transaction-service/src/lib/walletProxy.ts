@@ -28,7 +28,7 @@ export async function p2pTransfer(
     };
 
     if (options.idempotencyKey) {
-      headers["x-idempotency-key"] = options.idempotencyKey;
+      headers["idempotency-key"] = options.idempotencyKey;
     }
 
     const res: any = await axios.post(
@@ -88,7 +88,8 @@ export async function creditWallet(
   amount: string | number,
   description: string,
   referenceId: string,
-  idempotencyKey?: string
+  idempotencyKey?: string,
+  metaData?: any
 ): Promise<WalletResponse> {
   try {
     const headers: Record<string, string> = {
@@ -99,7 +100,7 @@ export async function creditWallet(
     };
 
     if (idempotencyKey) {
-      headers["x-idempotency-key"] = idempotencyKey;
+      headers["idempotency-key"] = idempotencyKey;
     }
 
     const res: any = await axios.post(
@@ -108,6 +109,7 @@ export async function creditWallet(
         amount: Number(amount),
         description: description,
         referenceId: referenceId,
+        metaData: metaData,
       },
       {
         headers,
@@ -160,7 +162,8 @@ export async function debitWallet(
   amount: string | number,
   description: string,
   referenceId: string,
-  idempotencyKey?: string
+  idempotencyKey?: string,
+  metaData?: any
 ): Promise<WalletResponse> {
   try {
     const headers: Record<string, string> = {
@@ -171,7 +174,7 @@ export async function debitWallet(
     };
 
     if (idempotencyKey) {
-      headers["x-idempotency-key"] = idempotencyKey;
+      headers["idempotency-key"] = idempotencyKey;
     }
 
     const res: any = await axios.post(
@@ -180,6 +183,7 @@ export async function debitWallet(
         amount: Number(amount),
         description: description,
         referenceId: referenceId,
+        metaData: metaData,
       },
       {
         headers,

@@ -94,7 +94,15 @@ export async function onRampTransaction(req: Request, res: Response) {
           sanitizedAmount,
           sanitizedDesc || "On-ramp deposit",
           transaction.id,
-          idemKey
+          idemKey,
+          {
+            paymentId: paymentResponse.payment.id,
+            transactionId: transaction.id,
+            paymentMethodId: paymentMethodId,
+            accountDetails: accountDetails,
+            transactionType: "CREDIT",
+            flow: "ONRAMP",
+          }
         );
       } catch (walletError: any) {
         // If wallet credit fails after payment success, mark as PENDING_RECONCILIATION

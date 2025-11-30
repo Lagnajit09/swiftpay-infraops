@@ -87,7 +87,7 @@ export function proxyRequest(
       }
 
       // If request is to wallet-service, pass idempotency-key header
-      if (detectedService === "wallet" && req.headers["idempotency-key"]) {
+      if (detectedService === "transaction" && req.headers["idempotency-key"]) {
         headersToForward["idempotency-key"] = req.headers["idempotency-key"];
       }
 
@@ -114,6 +114,7 @@ export function proxyRequest(
       // Add body for POST/PUT/DELETE requests
       if (["post", "put", "delete"].includes(method) && req.body) {
         axiosConfig.data = req.body;
+        axiosConfig.data.walletId = req.user?.walletID;
       }
 
       console.log(`Proxying ${method.toUpperCase()} ${url}`);

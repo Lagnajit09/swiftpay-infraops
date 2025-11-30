@@ -262,3 +262,21 @@ export const p2pRequestSchema = z.object({
     })
     .catchall(z.unknown()),
 });
+
+export const bankTransferSchema = z.object({
+  body: z.object({
+    amount: z.number().int().positive("Amount must be positive"),
+    description: z.string().optional(),
+    currency: z.string().min(1, "Currency is required"),
+    accountDetails: z.object({
+      accountNumber: z.string().min(1, "Account number is required"),
+      ifsc: z.string().min(1, "IFSC code is required"),
+      bankName: z.enum(["HDFC", "ICICI", "AXIS", "PNB", "KOTAK", "SBI"]),
+    }),
+  }),
+  headers: z
+    .object({
+      [idempotencyHeader]: idempotencyKeySchema,
+    })
+    .catchall(z.unknown()),
+});

@@ -6,7 +6,7 @@ export async function credit(req: Request, res: Response) {
   try {
     const userId = req.user?.userId || req.headers["x-user-id"];
     const idemKey = req.header(idempotencyHeader) || undefined;
-    const { amount, description, referenceId } = req.body;
+    const { amount, description, referenceId, metaData } = req.body;
 
     if (!userId) {
       return res.status(404).json({
@@ -44,6 +44,7 @@ export async function credit(req: Request, res: Response) {
           description: sanitizedDesc,
           referenceId: sanitizedRefId,
           idempotencyKey: idemKey,
+          metadata: metaData,
         },
       });
 
