@@ -11,6 +11,8 @@ services:
     environment:
       - AUTH_SERVICE_URL=http://auth-service:5001
       - WALLET_SERVICE_URL=http://wallet-service:5002
+      - TRANSACTION_SERVICE_URL=http://transaction-service:5003
+      - PAYMENT_SERVICE_URL=http://payment-service:5004
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost:3000}
     command: sh -c "npm run dev"
     volumes:
@@ -19,6 +21,8 @@ services:
     depends_on:
       - auth-service
       - wallet-service
+      - transaction-service
+      - payment-service
     networks:
       - backend
 
@@ -54,14 +58,53 @@ services:
       - AUTH_SERVICE_URL=http://auth-service:5001
       - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/swiftpaydb?schema=wallet_service
       - DIRECT_URL=postgresql://postgres:postgres@postgres:5432/swiftpaydb?schema=wallet_service
-      - REDIS_URL=redis://redis:6379
     command: sh -c "npx prisma migrate deploy && npm run dev"
     volumes:
       - ./wallet-service:/app
       - /app/node_modules
     depends_on:
       - postgres
-      - redis
+    networks:
+      - backend
+
+  transaction-service:
+    build:
+      context: ./transaction-service
+      dockerfile: Dockerfile
+      target: dev
+    env_file:
+      - ./transaction-service/.env.dev
+    environment:
+      - AUTH_SERVICE_URL=http://auth-service:5001
+      - WALLET_SERVICE_URL=http://wallet-service:5002
+      - PAYMENT_SERVICE_URL=http://payment-service:5004
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/swiftpaydb?schema=transaction_service
+      - DIRECT_URL=postgresql://postgres:postgres@postgres:5432/swiftpaydb?schema=transaction_service
+    command: sh -c "npx prisma migrate deploy && npm run dev"
+    volumes:
+      - ./transaction-service:/app
+      - /app/node_modules
+    depends_on:
+      - postgres
+    networks:
+      - backend
+
+  payment-service:
+    build:
+      context: ./payment-service
+      dockerfile: Dockerfile
+      target: dev
+    env_file:
+      - ./payment-service/.env.dev
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/swiftpaydb?schema=payment_service
+      - DIRECT_URL=postgresql://postgres:postgres@postgres:5432/swiftpaydb?schema=payment_service
+    command: sh -c "npx prisma migrate deploy && npm run dev"
+    volumes:
+      - ./payment-service:/app
+      - /app/node_modules
+    depends_on:
+      - postgres
     networks:
       - backend
 

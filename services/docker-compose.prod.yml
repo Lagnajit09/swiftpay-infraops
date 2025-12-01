@@ -48,7 +48,36 @@ services:
     networks:
       - backend
 
+  transaction-service:
+    build:
+      context: ./transaction-service
+      dockerfile: Dockerfile
+      target: production
+    container_name: transaction-service
+    restart: always
+    ports:
+      - "5003:5003"
+    env_file:
+      - ./transaction-service/.env.prod
+    depends_on: []
+    networks:
+      - backend
+
+  payment-service:
+    build:
+      context: ./payment-service
+      dockerfile: Dockerfile
+      target: production
+    container_name: payment-service
+    restart: always
+    ports:
+      - "5004:5004"
+    env_file:
+      - ./payment-service/.env.prod
+    depends_on: []
+    networks:
+      - backend
+
 networks:
   backend:
     driver: bridge
-
