@@ -9,9 +9,6 @@ import { requireAuth } from "../middlewares/authMiddlewares";
 const router = express.Router();
 
 const generalLimiter = rateLimit(rateLimitConfig.general);
-const depositLimiter = rateLimit(rateLimitConfig.deposit);
-const withdrawLimiter = rateLimit(rateLimitConfig.withdraw);
-const transactionLimiter = rateLimit(rateLimitConfig.transaction);
 
 router.get(
   "/health",
