@@ -1,10 +1,17 @@
 import express from "express";
 import { verifyTokenWithSession } from "../middleware/authMiddleware";
-import { sessionVerificationSchema } from "../utils/validation";
+import {
+  rateLimitConfig,
+  sessionVerificationSchema,
+} from "../utils/validation";
 import { serviceAuthMiddleware } from "../middleware/serviceAuthMiddleware";
 import { validateRequest } from "../middleware/validation";
+import rateLimit from "express-rate-limit";
 
 const router = express.Router();
+
+// Create rate limiters
+const serviceLimiter = rateLimit(rateLimitConfig.internalService);
 
 // Health check endpoint (unprotected)
 router.get("/health", (req, res) => {
@@ -16,6 +23,7 @@ router.get("/health", (req, res) => {
 });
 
 // Protected routes (require authentication)
+router.use(serviceLimiter);
 router.use(serviceAuthMiddleware);
 router.use(verifyTokenWithSession);
 

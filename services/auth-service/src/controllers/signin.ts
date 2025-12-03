@@ -6,6 +6,14 @@ import prisma from "../lib/db";
 import { redisClient } from "../lib/redis";
 import { sanitizeInput } from "../utils/validation";
 import { logSecurityEvent } from "../utils/securityEventLogging";
+import {
+  successResponse,
+  authErrorResponse,
+  authorizationErrorResponse,
+  errorResponse,
+  ErrorType,
+} from "../utils/responseFormatter";
+import { logAuthError, logInternalError } from "../utils/errorLogger";
 
 // Security constants
 const MAX_FAILED_ATTEMPTS = 5;
@@ -48,7 +56,7 @@ export const signin = async (req: Request, res: Response) => {
         userAgent,
         metadata: { reason: "User not found" },
       });
-      return res.status(401).json({ message: "Invalid credentials" });
+      return authErrorResponse(res, "Invalid credentials", "User not found");
     }
 
     // Check if account is locked
@@ -65,9 +73,12 @@ export const signin = async (req: Request, res: Response) => {
         userAgent,
         metadata: { reason: "Account locked", lockTimeRemaining },
       });
-      return res.status(423).json({
-        message: `Account locked. Try again in ${lockTimeRemaining} minutes.`,
-      });
+      return authErrorResponse(
+        res,
+        `Account locked. Try again in ${lockTimeRemaining} minutes.`,
+        "Account locked due to multiple failed login attempts",
+        { lockTimeRemaining, lockedUntil: user.lockedUntil }
+      );
     }
 
     // Check if account is active
@@ -81,9 +92,11 @@ export const signin = async (req: Request, res: Response) => {
         userAgent,
         metadata: { reason: "Account deactivated" },
       });
-      return res
-        .status(403)
-        .json({ message: "Account deactivated. Contact support." });
+      return authorizationErrorResponse(
+        res,
+        "Account deactivated. Contact support.",
+        "This account has been deactivated"
+      );
     }
 
     // Always check password even if user doesn't exist (timing attack prevention)
@@ -123,10 +136,15 @@ export const signin = async (req: Request, res: Response) => {
           },
         });
 
-        return res.status(423).json({
-          message:
-            "Account locked due to multiple failed attempts. Try again in 30 minutes.",
-        });
+        return authErrorResponse(
+          res,
+          "Account locked due to multiple failed attempts. Try again in 30 minutes.",
+          "Maximum failed login attempts exceeded",
+          {
+            failedAttempts: updatedUser.failedLoginAttempts,
+            lockDuration: "30 minutes",
+          }
+        );
       }
 
       // Log suspicious activity if threshold reached
@@ -158,10 +176,10 @@ export const signin = async (req: Request, res: Response) => {
         },
       });
 
-      return res.status(401).json({
-        message: "Invalid credentials",
+      return authErrorResponse(res, "Invalid credentials", "Invalid password", {
         attemptsRemaining:
           MAX_FAILED_ATTEMPTS - updatedUser.failedLoginAttempts,
+        failedAttempts: updatedUser.failedLoginAttempts,
       });
     }
 
@@ -229,21 +247,33 @@ export const signin = async (req: Request, res: Response) => {
     });
 
     // Success response with minimal user data
-    res.json({
-      message: "Signed in successfully.",
-      user: {
-        id: user.id,
-        email: user.email,
-        number: user.number,
-        walletID: user.walletID,
-        role: user.role,
-        emailVerified: user.emailVerified,
+    return successResponse(
+      res,
+      200,
+      "Signed in successfully.",
+      {
+        user: {
+          id: user.id,
+          email: user.email,
+          number: user.number,
+          walletID: user.walletID,
+          role: user.role,
+          emailVerified: user.emailVerified,
+        },
       },
-    });
-  } catch (error) {
-    console.error("Signin error:", error);
-    res.status(500).json({
-      message: "An error occurred during signin. Please try again.",
-    });
+      {
+        sessionCreated: true,
+        expiresIn: "30 days",
+      }
+    );
+  } catch (error: any) {
+    await logInternalError("Signin error", error, req);
+    return errorResponse(
+      res,
+      500,
+      "An error occurred during signin. Please try again.",
+      error,
+      ErrorType.INTERNAL_ERROR
+    );
   }
 };

@@ -3,6 +3,14 @@ import prisma from "../lib/db";
 import jwt from "jsonwebtoken";
 import { detectSuspiciousActivity } from "../controllers/security";
 import { redisClient } from "../lib/redis";
+import {
+  successResponse,
+  authErrorResponse,
+  authorizationErrorResponse,
+  errorResponse,
+  ErrorType,
+} from "../utils/responseFormatter";
+import { logAuthError, logInternalError } from "../utils/errorLogger";
 
 // Middleware to check if the user is already signed-in
 export const checkExistingSession = async (
@@ -44,14 +52,19 @@ export const checkExistingSession = async (
     }
 
     // Session is valid; user is already signed in
-    return res.status(200).json({
-      message: "Already signed in",
-      user: {
-        id: decoded.userId,
-        email: decoded.email,
-        role: decoded.role,
+    return successResponse(
+      res,
+      200,
+      "Already signed in",
+      {
+        user: {
+          id: decoded.userId,
+          email: decoded.email,
+          role: decoded.role,
+        },
       },
-    });
+      { sessionValid: true }
+    );
   } catch (error) {
     console.error("Error in checkExistingSession middleware:", error);
     // On error, fallback to next to avoid blocking the sign-in flow
@@ -87,11 +100,14 @@ export const suspiciousIPDetection = async (
         },
       });
 
-      return res.status(429).json({
-        message:
-          "Suspicious activity detected. Please try again later or contact support.",
-        code: "SUSPICIOUS_ACTIVITY",
-      });
+      return errorResponse(
+        res,
+        429,
+        "Suspicious activity detected. Please try again later or contact support.",
+        { code: "SUSPICIOUS_ACTIVITY" },
+        ErrorType.AUTHORIZATION_ERROR,
+        { blocked: true, reason: "Suspicious IP pattern detected" }
+      );
     }
 
     next();
@@ -116,16 +132,24 @@ export const requireEmailVerification = async (
     });
 
     if (!user?.emailVerified) {
-      return res.status(403).json({
-        message: "Email verification required for this operation.",
-        requireEmailVerification: true,
-      });
+      return authorizationErrorResponse(
+        res,
+        "Email verification required for this operation.",
+        "This action requires a verified email address",
+        { requireEmailVerification: true }
+      );
     }
 
     next();
-  } catch (error) {
-    console.error("Email verification check error:", error);
-    res.status(500).json({ message: "Internal server error" });
+  } catch (error: any) {
+    await logInternalError("Email verification check error", error, req);
+    return errorResponse(
+      res,
+      500,
+      "Internal server error",
+      error,
+      ErrorType.INTERNAL_ERROR
+    );
   }
 };
 
@@ -140,18 +164,21 @@ export const verifyTokenWithSession = async (
 
     // If no session ID, user is already signed out
     if (!sessionId) {
-      return res.status(401).json({
-        message: "No session found, please signin first.",
-        success: true,
-      });
+      return authErrorResponse(
+        res,
+        "No session found, please signin first.",
+        "Session ID not found in request"
+      );
     }
 
     const token = await redisClient.get(sessionId);
 
     if (!token) {
-      return res
-        .status(401)
-        .json({ message: "Access denied. No token provided." });
+      return authErrorResponse(
+        res,
+        "Access denied. No token provided.",
+        "Token not found in Redis"
+      );
     }
 
     // Verify JWT
@@ -163,7 +190,11 @@ export const verifyTokenWithSession = async (
     });
 
     if (!session || session.expiresAt < new Date()) {
-      return res.status(401).json({ message: "Invalid or expired session." });
+      return authErrorResponse(
+        res,
+        "Invalid or expired session.",
+        "Session not found or has expired"
+      );
     }
 
     // Check if user is still active
@@ -172,7 +203,11 @@ export const verifyTokenWithSession = async (
     });
 
     if (!user || !user.isActive) {
-      return res.status(403).json({ message: "Account deactivated." });
+      return authorizationErrorResponse(
+        res,
+        "Account deactivated.",
+        "This account has been deactivated"
+      );
     }
 
     req.user = {
@@ -184,9 +219,13 @@ export const verifyTokenWithSession = async (
     };
 
     next();
-  } catch (error) {
-    console.error("Token verification error:", error);
-    res.status(401).json({ message: "Invalid token." });
+  } catch (error: any) {
+    await logAuthError("Token verification error", error, req);
+    return authErrorResponse(
+      res,
+      "Invalid token.",
+      error.message || "Token verification failed"
+    );
   }
 };
 
@@ -197,7 +236,11 @@ export const requireAdminRole = (
   next: NextFunction
 ) => {
   if (req.user?.role !== "ADMIN") {
-    return res.status(403).json({ message: "Admin access required" });
+    return authorizationErrorResponse(
+      res,
+      "Admin access required",
+      "This endpoint requires administrator privileges"
+    );
   }
   next();
 };

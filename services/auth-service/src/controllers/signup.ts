@@ -4,6 +4,18 @@ import prisma from "../lib/db";
 import axios from "axios";
 import crypto from "crypto";
 import { logSecurityEvent } from "../utils/securityEventLogging";
+import {
+  successResponse,
+  validationErrorResponse,
+  externalServiceErrorResponse,
+  errorResponse,
+  ErrorType,
+} from "../utils/responseFormatter";
+import {
+  logValidationError,
+  logExternalServiceError,
+  logInternalError,
+} from "../utils/errorLogger";
 
 export const signup = async (req: Request, res: Response) => {
   const { name, email, password, number } = req.body;
@@ -35,12 +47,16 @@ export const signup = async (req: Request, res: Response) => {
         },
       });
 
-      return res.status(400).json({
-        message:
-          existingUser.email === email
-            ? "Email already registered"
-            : "Phone number already registered",
-      });
+      return validationErrorResponse(
+        res,
+        existingUser.email === email
+          ? "Email already registered"
+          : "Phone number already registered",
+        existingUser.email === email
+          ? "An account with this email address already exists"
+          : "An account with this phone number already exists",
+        { field: existingUser.email === email ? "email" : "number" }
+      );
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -99,12 +115,27 @@ export const signup = async (req: Request, res: Response) => {
         },
       });
 
-      res.status(201).json({
-        message:
-          "User registered. Please check your email to verify your account.",
-      });
+      return successResponse(
+        res,
+        201,
+        "User registered. Please check your email to verify your account.",
+        {
+          userId: newUser.id,
+          email: newUser.email,
+          emailVerified: false,
+        },
+        {
+          verificationEmailSent: true,
+          tokenExpiresIn: "15 minutes",
+        }
+      );
     } catch (emailError: any) {
-      console.error("Failed to send verification email:", emailError);
+      await logExternalServiceError(
+        "Failed to send verification email",
+        emailError,
+        req,
+        { service: "EmailJS", userId: newUser.id.toString() }
+      );
 
       // Log signup with email failure
       await logSecurityEvent({
@@ -128,13 +159,15 @@ export const signup = async (req: Request, res: Response) => {
         where: { id: newUser.id },
       });
 
-      return res.status(500).json({
-        message:
-          "Registration failed. Unable to send verification email. Please try again.",
-      });
+      return externalServiceErrorResponse(
+        res,
+        "Registration failed. Unable to send verification email. Please try again.",
+        emailError,
+        { service: "EmailJS" }
+      );
     }
   } catch (error: any) {
-    console.error("Signup error:", error);
+    await logInternalError("Signup error", error, req, { email, number });
 
     // Log general signup failure
     await logSecurityEvent({
@@ -150,6 +183,12 @@ export const signup = async (req: Request, res: Response) => {
       },
     });
 
-    res.status(500).json({ message: "Signup failed" });
+    return errorResponse(
+      res,
+      500,
+      "Signup failed",
+      error,
+      ErrorType.INTERNAL_ERROR
+    );
   }
 };

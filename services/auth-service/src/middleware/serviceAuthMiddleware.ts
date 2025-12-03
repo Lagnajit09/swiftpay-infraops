@@ -2,6 +2,12 @@ import { Request, Response, NextFunction } from "express";
 import crypto from "crypto";
 import { logSecurityEvent } from "../utils/securityEventLogging";
 import "dotenv/config";
+import {
+  authErrorResponse,
+  errorResponse,
+  ErrorType,
+} from "../utils/responseFormatter";
+import { logAuthError, logInternalError } from "../utils/errorLogger";
 
 // Registered services and their secrets (in production, store in environment variables or secret manager)
 const SERVICE_SECRETS = {
@@ -45,10 +51,12 @@ export const serviceAuthMiddleware = async (
         },
       });
 
-      return res.status(401).json({
-        success: false,
-        message: "Service authentication required",
-      });
+      return authErrorResponse(
+        res,
+        "Service authentication required",
+        "Missing service credentials (x-service-id or x-service-secret)",
+        { serviceId: serviceId || "unknown" }
+      );
     }
 
     // Check if service is registered
@@ -66,10 +74,12 @@ export const serviceAuthMiddleware = async (
         },
       });
 
-      return res.status(401).json({
-        success: false,
-        message: "Unknown service",
-      });
+      return authErrorResponse(
+        res,
+        "Unknown service",
+        "Service ID not registered in the system",
+        { serviceId }
+      );
     }
 
     // Simple secret validation
@@ -84,10 +94,12 @@ export const serviceAuthMiddleware = async (
         },
       });
 
-      return res.status(401).json({
-        success: false,
-        message: "Invalid service credentials",
-      });
+      return authErrorResponse(
+        res,
+        "Invalid service credentials",
+        "Service secret does not match expected value",
+        { serviceId }
+      );
     }
 
     // Signature-based authentication
@@ -109,10 +121,16 @@ export const serviceAuthMiddleware = async (
           },
         });
 
-        return res.status(401).json({
-          success: false,
-          message: "Request timestamp invalid",
-        });
+        return authErrorResponse(
+          res,
+          "Request timestamp invalid",
+          "Request timestamp is too old or in the future (5 minute tolerance)",
+          {
+            serviceId,
+            timestamp: requestTime,
+            timeDifference: Math.abs(now - requestTime),
+          }
+        );
       }
 
       // Verify signature
@@ -133,10 +151,12 @@ export const serviceAuthMiddleware = async (
           },
         });
 
-        return res.status(401).json({
-          success: false,
-          message: "Invalid request signature",
-        });
+        return authErrorResponse(
+          res,
+          "Invalid request signature",
+          "Request signature verification failed",
+          { serviceId }
+        );
       }
     }
 
@@ -160,8 +180,10 @@ export const serviceAuthMiddleware = async (
     };
 
     next();
-  } catch (error) {
-    console.error("Service authentication error:", error);
+  } catch (error: any) {
+    await logInternalError("Service authentication error", error, req, {
+      serviceId: (req.headers["x-service-id"] as string) || "unknown",
+    });
 
     await logSecurityEvent({
       eventType: "SERVICE_AUTH_FAILURE",
@@ -173,9 +195,12 @@ export const serviceAuthMiddleware = async (
       },
     });
 
-    res.status(500).json({
-      success: false,
-      message: "Service authentication error",
-    });
+    return errorResponse(
+      res,
+      500,
+      "Service authentication error",
+      error,
+      ErrorType.INTERNAL_ERROR
+    );
   }
 };

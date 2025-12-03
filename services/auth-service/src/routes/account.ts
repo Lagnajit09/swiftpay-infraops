@@ -3,6 +3,7 @@ import { getUserProfile, updateUserDetails } from "../controllers/userAction";
 import { rateLimitConfig } from "../utils/validation";
 import rateLimit from "express-rate-limit";
 import { serviceAuthMiddleware } from "../middleware/serviceAuthMiddleware";
+import { verifyTokenWithSession } from "../middleware/authMiddleware";
 
 const router = express.Router();
 
@@ -20,6 +21,7 @@ router.get("/health", (req, res) => {
 
 router.use(generalLimiter);
 router.use(serviceAuthMiddleware);
+router.use(verifyTokenWithSession);
 
 // User Profile Operations
 router.get("/me", getUserProfile);

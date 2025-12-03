@@ -20,6 +20,7 @@ import {
   verifyTokenWithSession,
 } from "../middleware/authMiddleware";
 import { getActiveSessions, revokeSession } from "../controllers/session";
+import { serviceAuthMiddleware } from "../middleware/serviceAuthMiddleware";
 
 const router = express.Router();
 
@@ -36,6 +37,7 @@ router.get("/health", (req, res) => {
 });
 
 router.use(generalLimiter);
+router.use(serviceAuthMiddleware);
 
 // Routes with validation and rate limiting
 router.post("/signup", suspiciousIPDetection, signup);

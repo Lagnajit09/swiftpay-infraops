@@ -1,5 +1,11 @@
 import { Request, Response } from "express";
 import prisma from "../lib/db";
+import {
+  successResponse,
+  errorResponse,
+  ErrorType,
+} from "../utils/responseFormatter";
+import { logInternalError } from "../utils/errorLogger";
 
 // Detect suspicious IP patterns
 export const detectSuspiciousActivity = async (
@@ -86,14 +92,25 @@ export const getSecurityInfo = async (req: Request, res: Response) => {
       },
     });
 
-    res.json({
-      user,
-      activeSessions,
-      recentSecurityEvents,
-    });
-  } catch (error) {
-    console.error("Get security info error:", error);
-    res.status(500).json({ message: "Internal server error" });
+    return successResponse(
+      res,
+      200,
+      "Security information retrieved successfully",
+      {
+        user,
+        activeSessions,
+        recentSecurityEvents,
+      }
+    );
+  } catch (error: any) {
+    await logInternalError("Get security info error", error, req);
+    return errorResponse(
+      res,
+      500,
+      "Internal server error",
+      error,
+      ErrorType.INTERNAL_ERROR
+    );
   }
 };
 
@@ -156,23 +173,34 @@ export const getSecurityMetrics = async (req: Request, res: Response) => {
       }),
     ]);
 
-    res.json({
-      last24Hours: {
-        totalLogins: metrics[0],
-        failedLogins: metrics[1],
-        accountLockouts: metrics[2],
-      },
-      last7Days: {
-        suspiciousActivities: metrics[3],
-      },
-      current: {
-        lockedAccounts: metrics[4],
-        unverifiedAccounts: metrics[5],
-      },
-    });
-  } catch (error) {
-    console.error("Security metrics error:", error);
-    res.status(500).json({ message: "Internal server error" });
+    return successResponse(
+      res,
+      200,
+      "Security metrics retrieved successfully",
+      {
+        last24Hours: {
+          totalLogins: metrics[0],
+          failedLogins: metrics[1],
+          accountLockouts: metrics[2],
+        },
+        last7Days: {
+          suspiciousActivities: metrics[3],
+        },
+        current: {
+          lockedAccounts: metrics[4],
+          unverifiedAccounts: metrics[5],
+        },
+      }
+    );
+  } catch (error: any) {
+    await logInternalError("Security metrics error", error, req);
+    return errorResponse(
+      res,
+      500,
+      "Internal server error",
+      error,
+      ErrorType.INTERNAL_ERROR
+    );
   }
 };
 
@@ -221,7 +249,7 @@ export const getSecurityLogs = async (req: Request, res: Response) => {
       prisma.securityLog.count({ where: whereClause }),
     ]);
 
-    res.json({
+    return successResponse(res, 200, "Security logs retrieved successfully", {
       logs,
       pagination: {
         page: validPage,
@@ -230,8 +258,14 @@ export const getSecurityLogs = async (req: Request, res: Response) => {
         totalPages: Math.ceil(totalCount / validLimit),
       },
     });
-  } catch (error) {
-    console.error("Get security logs error:", error);
-    res.status(500).json({ message: "Internal server error" });
+  } catch (error: any) {
+    await logInternalError("Get security logs error", error, req);
+    return errorResponse(
+      res,
+      500,
+      "Internal server error",
+      error,
+      ErrorType.INTERNAL_ERROR
+    );
   }
 };

@@ -4,6 +4,20 @@ import crypto from "crypto";
 import bcrypt from "bcryptjs";
 import axios from "axios";
 import { logSecurityEvent } from "../utils/securityEventLogging";
+import {
+  successResponse,
+  validationErrorResponse,
+  externalServiceErrorResponse,
+  notFoundErrorResponse,
+  authErrorResponse,
+  errorResponse,
+  ErrorType,
+} from "../utils/responseFormatter";
+import {
+  logValidationError,
+  logExternalServiceError,
+  logInternalError,
+} from "../utils/errorLogger";
 
 export const requestPasswordReset = async (req: Request, res: Response) => {
   try {
@@ -23,10 +37,13 @@ export const requestPasswordReset = async (req: Request, res: Response) => {
         userAgent,
         metadata: { reason: "User not found" },
       });
-      return res.status(200).json({
-        message:
-          "If an account with this email exists, a password reset link has been sent.",
-      });
+      return successResponse(
+        res,
+        200,
+        "If an account with this email exists, a password reset link has been sent.",
+        undefined,
+        { emailSent: false, reason: "User not found" }
+      );
     }
 
     // Generate token
@@ -77,8 +94,13 @@ export const requestPasswordReset = async (req: Request, res: Response) => {
           timeout: 10000, // 10 second timeout
         }
       );
-    } catch (emailError) {
-      console.error("Failed to send reset email:", emailError);
+    } catch (emailError: any) {
+      await logExternalServiceError(
+        "Failed to send reset email",
+        emailError,
+        req,
+        { service: "EmailJS", userId: user.id.toString() }
+      );
       // Clear the token since email failed
       await prisma.user.update({
         where: { id: user.id },
@@ -87,18 +109,30 @@ export const requestPasswordReset = async (req: Request, res: Response) => {
           resetTokenExpires: null,
         },
       });
-      return res.status(500).json({
-        message: "Failed to send reset email. Please try again.",
-      });
+      return externalServiceErrorResponse(
+        res,
+        "Failed to send reset email. Please try again.",
+        emailError,
+        { service: "EmailJS" }
+      );
     }
 
-    return res.status(200).json({
-      message:
-        "If an account with this email exists, a password reset link has been sent.",
-    });
-  } catch (error) {
-    console.error("Password reset request error:", error);
-    res.status(500).json({ message: "Internal server error." });
+    return successResponse(
+      res,
+      200,
+      "If an account with this email exists, a password reset link has been sent.",
+      undefined,
+      { emailSent: true, expiresIn: "15 minutes" }
+    );
+  } catch (error: any) {
+    await logInternalError("Password reset request error", error, req);
+    return errorResponse(
+      res,
+      500,
+      "Internal server error.",
+      error,
+      ErrorType.INTERNAL_ERROR
+    );
   }
 };
 
@@ -124,9 +158,11 @@ export const resetPassword = async (req: Request, res: Response) => {
         userAgent,
         metadata: { reason: "Invalid or expired token" },
       });
-      return res
-        .status(400)
-        .json({ message: "Invalid or expired reset token" });
+      return validationErrorResponse(
+        res,
+        "Invalid or expired reset token",
+        "The password reset token is either invalid or has expired. Please request a new password reset."
+      );
     }
 
     // Hash new password
@@ -160,13 +196,22 @@ export const resetPassword = async (req: Request, res: Response) => {
       userAgent,
     });
 
-    return res.status(200).json({
-      message:
-        "Password reset successful. Please login with your new password.",
-    });
-  } catch (error) {
-    console.error("Password reset error:", error);
-    res.status(500).json({ message: "Internal server error." });
+    return successResponse(
+      res,
+      200,
+      "Password reset successful. Please login with your new password.",
+      { passwordReset: true },
+      { sessionsInvalidated: true }
+    );
+  } catch (error: any) {
+    await logInternalError("Password reset error", error, req);
+    return errorResponse(
+      res,
+      500,
+      "Internal server error.",
+      error,
+      ErrorType.INTERNAL_ERROR
+    );
   }
 };
 
@@ -180,7 +225,11 @@ export const changePassword = async (req: Request, res: Response) => {
     });
 
     if (!user) {
-      return res.status(404).json({ message: "User not found" });
+      return notFoundErrorResponse(
+        res,
+        "User not found",
+        "No user exists with the provided ID"
+      );
     }
 
     // Verify current password
@@ -199,7 +248,11 @@ export const changePassword = async (req: Request, res: Response) => {
         success: true,
         metadata: { action: "incorrect current password" },
       });
-      return res.status(400).json({ message: "Current password is incorrect" });
+      return authErrorResponse(
+        res,
+        "Current password is incorrect",
+        "The provided current password does not match our records"
+      );
     }
 
     // Hash new password
@@ -238,12 +291,21 @@ export const changePassword = async (req: Request, res: Response) => {
       metadata: { action: "password_changed" },
     });
 
-    res.json({
-      message:
-        "Password changed successfully. Other sessions have been logged out.",
-    });
-  } catch (error) {
-    console.error("Change password error:", error);
-    res.status(500).json({ message: "Internal server error" });
+    return successResponse(
+      res,
+      200,
+      "Password changed successfully. Other sessions have been logged out.",
+      { passwordChanged: true },
+      { otherSessionsInvalidated: true }
+    );
+  } catch (error: any) {
+    await logInternalError("Change password error", error, req);
+    return errorResponse(
+      res,
+      500,
+      "Internal server error",
+      error,
+      ErrorType.INTERNAL_ERROR
+    );
   }
 };

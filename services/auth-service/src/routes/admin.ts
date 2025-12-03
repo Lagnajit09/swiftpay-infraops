@@ -6,6 +6,7 @@ import {
   verifyTokenWithSession,
 } from "../middleware/authMiddleware";
 import { getSecurityLogs, getSecurityMetrics } from "../controllers/security";
+import { serviceAuthMiddleware } from "../middleware/serviceAuthMiddleware";
 
 const generalLimiter = rateLimit(rateLimitConfig.general);
 
@@ -21,13 +22,15 @@ router.get("/health", (req, res) => {
 });
 
 // Protected routes (require authentication)
+router.use(generalLimiter);
+router.use(serviceAuthMiddleware);
 router.use(verifyTokenWithSession);
 router.use(requireAdminRole);
 
 // Get security metrics (admin only)
-router.get("/security-metrics", generalLimiter, getSecurityMetrics);
+router.get("/security-metrics", getSecurityMetrics);
 
 // Get security logs (admin only)
-router.get("/security-logs", generalLimiter, getSecurityLogs);
+router.get("/security-logs", getSecurityLogs);
 
 export default router;

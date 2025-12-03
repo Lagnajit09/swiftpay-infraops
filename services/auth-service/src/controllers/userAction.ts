@@ -2,6 +2,16 @@ import { Request, Response } from "express";
 import prisma from "../lib/db";
 import { sanitizeInput } from "../utils/validation";
 import { logSecurityEvent } from "../utils/securityEventLogging";
+import {
+  successResponse,
+  authErrorResponse,
+  notFoundErrorResponse,
+  authorizationErrorResponse,
+  conflictErrorResponse,
+  errorResponse,
+  ErrorType,
+} from "../utils/responseFormatter";
+import { logInternalError } from "../utils/errorLogger";
 
 // Get user profile (for authenticated user)
 export const getUserProfile = async (req: Request, res: Response) => {
@@ -9,9 +19,11 @@ export const getUserProfile = async (req: Request, res: Response) => {
     const userId = req.user?.id || req.headers["x-user-id"]?.toString();
 
     if (!userId) {
-      return res
-        .status(401)
-        .json({ message: "Unauthorized: User info missing" });
+      return authErrorResponse(
+        res,
+        "Unauthorized: User info missing",
+        "User ID not found in request"
+      );
     }
 
     const user = await prisma.user.findUnique({
@@ -30,19 +42,25 @@ export const getUserProfile = async (req: Request, res: Response) => {
     });
 
     if (!user) {
-      return res.status(404).json({ message: "User not found" });
+      return notFoundErrorResponse(
+        res,
+        "User not found",
+        "No user exists with the provided ID"
+      );
     }
 
-    res.json({
-      success: true,
+    return successResponse(res, 200, "User profile retrieved successfully", {
       user,
     });
-  } catch (error) {
-    console.error("Get user profile error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to fetch user profile",
-    });
+  } catch (error: any) {
+    await logInternalError("Get user profile error", error, req);
+    return errorResponse(
+      res,
+      500,
+      "Failed to fetch user profile",
+      error,
+      ErrorType.INTERNAL_ERROR
+    );
   }
 };
 
@@ -66,9 +84,11 @@ export const updateUserDetails = async (req: Request, res: Response) => {
         },
       });
 
-      return res
-        .status(401)
-        .json({ message: "Unauthorized: User info missing" });
+      return authErrorResponse(
+        res,
+        "Unauthorized: User info missing",
+        "User ID not found in request"
+      );
     }
 
     // req.body has already been validated by the schema middleware
@@ -139,10 +159,11 @@ export const updateUserDetails = async (req: Request, res: Response) => {
         metadata: { action: "update_user_details" },
       });
 
-      return res.status(404).json({
-        success: false,
-        message: "User not found",
-      });
+      return notFoundErrorResponse(
+        res,
+        "User not found",
+        "No user exists with the provided ID"
+      );
     }
 
     if (!existingUser.isActive) {
@@ -156,10 +177,11 @@ export const updateUserDetails = async (req: Request, res: Response) => {
         metadata: { action: "update_user_details" },
       });
 
-      return res.status(403).json({
-        success: false,
-        message: "Account is inactive",
-      });
+      return authorizationErrorResponse(
+        res,
+        "Account is inactive",
+        "This account has been deactivated"
+      );
     }
 
     // Perform the update
@@ -204,19 +226,24 @@ export const updateUserDetails = async (req: Request, res: Response) => {
       },
     });
 
-    return res.status(200).json({
-      success: true,
-      user: updated,
-      message: `Successfully updated ${processedFields.length} field(s)`,
-      summary: {
-        totalFields: processedFields.length,
-        updatedFields: processedFields.length,
-        rejectedFields: 0,
-        validationErrors: 0,
-      },
-    });
+    return successResponse(
+      res,
+      200,
+      `Successfully updated ${processedFields.length} field(s)`,
+      { user: updated },
+      {
+        summary: {
+          totalFields: processedFields.length,
+          updatedFields: processedFields.length,
+          rejectedFields: 0,
+          validationErrors: 0,
+        },
+      }
+    );
   } catch (error: any) {
-    console.error("Update user details error:", error);
+    await logInternalError("Update user details error", error, req, {
+      userId: userId?.toString(),
+    });
 
     // Log the error
     await logSecurityEvent({
@@ -235,23 +262,28 @@ export const updateUserDetails = async (req: Request, res: Response) => {
 
     // Handle Prisma errors
     if (error?.code === "P2025") {
-      return res.status(404).json({
-        success: false,
-        message: "User not found",
-      });
+      return notFoundErrorResponse(
+        res,
+        "User not found",
+        "The user record could not be found"
+      );
     }
 
     if (error?.code === "P2002") {
-      return res.status(409).json({
-        success: false,
-        message: "Unique constraint violation",
-      });
+      return conflictErrorResponse(
+        res,
+        "Unique constraint violation",
+        "The provided value already exists for a unique field"
+      );
     }
 
     // Generic error response
-    return res.status(500).json({
-      success: false,
-      message: "Failed to update user details",
-    });
+    return errorResponse(
+      res,
+      500,
+      "Failed to update user details",
+      error,
+      ErrorType.INTERNAL_ERROR
+    );
   }
 };

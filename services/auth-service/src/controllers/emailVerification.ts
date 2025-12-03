@@ -3,6 +3,21 @@ import prisma from "../lib/db";
 import crypto from "crypto";
 import axios from "axios";
 import { logSecurityEvent } from "../utils/securityEventLogging";
+import {
+  successResponse,
+  authErrorResponse,
+  notFoundErrorResponse,
+  validationErrorResponse,
+  externalServiceErrorResponse,
+  errorResponse,
+  ErrorType,
+} from "../utils/responseFormatter";
+import {
+  logAuthError,
+  logValidationError,
+  logExternalServiceError,
+  logInternalError,
+} from "../utils/errorLogger";
 
 export const requestEmailVerification = async (req: Request, res: Response) => {
   try {
@@ -11,7 +26,11 @@ export const requestEmailVerification = async (req: Request, res: Response) => {
     const userAgent = req.get("User-Agent");
 
     if (!userId) {
-      return res.status(401).json({ message: "Unauthorized" });
+      return authErrorResponse(
+        res,
+        "Unauthorized",
+        "User ID not found in request"
+      );
     }
 
     const user = await prisma.user.findUnique({
@@ -28,7 +47,11 @@ export const requestEmailVerification = async (req: Request, res: Response) => {
           reason: "User not found!",
         },
       });
-      return res.status(404).json({ message: "User not found!" });
+      return notFoundErrorResponse(
+        res,
+        "User not found!",
+        "No user exists with the provided ID"
+      );
     }
 
     // Check if email is already verified
@@ -44,9 +67,11 @@ export const requestEmailVerification = async (req: Request, res: Response) => {
           reason: "Email is already verified.",
         },
       });
-      return res.status(400).json({
-        message: "Email is already verified.",
-      });
+      return validationErrorResponse(
+        res,
+        "Email is already verified.",
+        "This email address has already been verified"
+      );
     }
 
     // Generate new verification token
@@ -96,12 +121,20 @@ export const requestEmailVerification = async (req: Request, res: Response) => {
         { headers: { "Content-Type": "application/json" }, timeout: 10000 }
       );
 
-      return res.status(200).json({
-        message:
-          "Verification email sent successfully. Please check your inbox.",
-      });
+      return successResponse(
+        res,
+        200,
+        "Verification email sent successfully. Please check your inbox.",
+        undefined,
+        { emailSent: true, expiresIn: "24 hours" }
+      );
     } catch (emailError: any) {
-      console.error("Failed to send verification email:", emailError);
+      await logExternalServiceError(
+        "Failed to send verification email",
+        emailError,
+        req,
+        { service: "EmailJS", userId: user.id.toString() }
+      );
 
       // Clear the token since email failed
       await prisma.user.update({
@@ -126,20 +159,30 @@ export const requestEmailVerification = async (req: Request, res: Response) => {
         },
       });
 
-      return res.status(500).json({
-        message: "Failed to send verification email. Please try again.",
-      });
+      return externalServiceErrorResponse(
+        res,
+        "Failed to send verification email. Please try again.",
+        emailError,
+        { service: "EmailJS" }
+      );
     }
-  } catch (error) {
-    console.error("Request email verification error:", error);
+  } catch (error: any) {
+    await logInternalError("Request email verification error", error, req);
     await logSecurityEvent({
       eventType: "EMAIL_VERIFICATION_FAILURE",
       success: false,
       metadata: {
         reason: "Internal server error.",
+        error: error.message,
       },
     });
-    res.status(500).json({ message: "Internal server error" });
+    return errorResponse(
+      res,
+      500,
+      "Internal server error",
+      error,
+      ErrorType.INTERNAL_ERROR
+    );
   }
 };
 
@@ -150,7 +193,11 @@ export const verifyEmail = async (req: Request, res: Response) => {
     const userAgent = req.get("User-Agent");
 
     if (!token || typeof token !== "string") {
-      return res.status(400).json({ message: "Invalid or missing token." });
+      return validationErrorResponse(
+        res,
+        "Invalid or missing token.",
+        "Verification token must be a valid string"
+      );
     }
 
     // Find the user with this token
@@ -171,7 +218,11 @@ export const verifyEmail = async (req: Request, res: Response) => {
           reason: "Invalid or expired token.",
         },
       });
-      return res.status(400).json({ message: "Invalid or expired token." });
+      return validationErrorResponse(
+        res,
+        "Invalid or expired token.",
+        "The verification token is either invalid or has expired. Please request a new verification email."
+      );
     }
 
     // Mark email as verified & remove token
@@ -196,16 +247,29 @@ export const verifyEmail = async (req: Request, res: Response) => {
       },
     });
 
-    return res.status(200).json({ message: "Email successfully verified." });
-  } catch (error) {
-    console.error("Email verification error:", error);
+    return successResponse(
+      res,
+      200,
+      "Email successfully verified.",
+      { emailVerified: true },
+      { verifiedAt: new Date().toISOString() }
+    );
+  } catch (error: any) {
+    await logInternalError("Email verification error", error, req);
     await logSecurityEvent({
       eventType: "EMAIL_VERIFICATION_FAILURE",
       success: false,
       metadata: {
         reason: "Internal server error.",
+        error: error.message,
       },
     });
-    res.status(500).json({ message: "Internal server error." });
+    return errorResponse(
+      res,
+      500,
+      "Internal server error.",
+      error,
+      ErrorType.INTERNAL_ERROR
+    );
   }
 };

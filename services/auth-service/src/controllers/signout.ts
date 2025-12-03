@@ -3,6 +3,12 @@ import jwt from "jsonwebtoken";
 import prisma from "../lib/db";
 import { redisClient } from "../lib/redis";
 import { logSecurityEvent } from "../utils/securityEventLogging";
+import {
+  successResponse,
+  errorResponse,
+  ErrorType,
+} from "../utils/responseFormatter";
+import { logInternalError } from "../utils/errorLogger";
 
 // Security constants
 const SIGNOUT_TYPES = {
@@ -24,9 +30,8 @@ export const signout = async (req: Request, res: Response) => {
 
     // If no session ID, user is already signed out
     if (!sessionId) {
-      return res.status(200).json({
-        message: "Already signed out.",
-        success: true,
+      return successResponse(res, 200, "Already signed out.", {
+        alreadySignedOut: true,
       });
     }
 
@@ -101,13 +106,15 @@ export const signout = async (req: Request, res: Response) => {
     });
 
     // Success response
-    res.status(200).json({
-      message: getSignoutMessage(signoutType),
-      success: true,
-      signoutType,
-    });
-  } catch (error) {
-    console.error("Signout error:", error);
+    return successResponse(
+      res,
+      200,
+      getSignoutMessage(signoutType),
+      { signedOut: true },
+      { signoutType }
+    );
+  } catch (error: any) {
+    await logInternalError("Signout error", error, req);
 
     // Still clear the cookie even if there's an error
     res.clearCookie("sessionId", {
@@ -117,10 +124,13 @@ export const signout = async (req: Request, res: Response) => {
       path: "/",
     });
 
-    res.status(500).json({
-      message: "An error occurred during signout",
-      success: false,
-    });
+    return errorResponse(
+      res,
+      500,
+      "An error occurred during signout",
+      error,
+      ErrorType.INTERNAL_ERROR
+    );
   }
 };
 

@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { success, z } from "zod";
 
 // --------------------------------- USER ACTION ROUTES SCHEMAS ----------------------------------
 // Session verification schema
@@ -64,19 +64,36 @@ export const rateLimitConfig = {
   general: {
     windowMs: 15 * 60 * 1000, // 15 minutes
     max: 50,
-    message: "Too many requests. Please try again later.",
+    message: {
+      success: false,
+      message: "Too many requests. Please try again later.",
+      error: {
+        code: "RATE_LIMIT_EXCEEDED",
+        type: "RATE_LIMIT_EXCEEDED_ERROR",
+        details:
+          "General rate limit allows 50 requests per 15 minutes. Limit exceeded.",
+        retryAfter: "15 minutes",
+      },
+    },
     standardHeaders: true,
     legacyHeaders: false,
   },
 
   internalService: {
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 1000, // Higher limit for internal services
+    max: 500, // Higher limit for internal services
     standardHeaders: true,
     legacyHeaders: false,
     message: {
-      error: "Too many requests from this service",
-      retryAfter: "15 minutes",
+      success: false,
+      message: "Too many requests from this service",
+      error: {
+        code: "RATE_LIMIT_EXCEEDED",
+        type: "RATE_LIMIT_EXCEEDED_ERROR",
+        details:
+          "Internal service rate limit allows 500 requests per 15 minutes. Limit exceeded.",
+        retryAfter: "15 minutes",
+      },
     },
     skip: (req: any) => {
       // Skip rate limiting for health checks
