@@ -4,6 +4,18 @@ import { idempotencyHeader, sanitizeInput } from "../utils/validation";
 import { offRampPayment } from "../lib/paymentProxy";
 import { handleTransactionError } from "../utils/helpers";
 import { debitWallet } from "../lib/walletProxy";
+import {
+  successResponse,
+  authErrorResponse,
+  validationErrorResponse,
+  errorResponse,
+  ErrorType,
+} from "../utils/responseFormatter";
+import {
+  logValidationError,
+  logExternalServiceError,
+  logInternalError,
+} from "../utils/errorLogger";
 
 // POST /api/txn/off-ramp - Withdraw money from wallet
 export async function offRampTransaction(req: Request, res: Response) {
@@ -21,20 +33,43 @@ export async function offRampTransaction(req: Request, res: Response) {
     } = req.body;
 
     if (!userId) {
-      return res
-        .status(404)
-        .json({ error: "Unauthorized! UserID is missing." });
+      return authErrorResponse(
+        res,
+        "Unauthorized! UserID is missing.",
+        "User ID not found in request",
+        { userId: userId || "unknown" }
+      );
     }
 
     const sanitizedAmount = sanitizeInput.amount(amount);
     const sanitizedDesc = sanitizeInput.description(description);
 
     if (BigInt(sanitizedAmount) <= 0) {
-      return res.status(400).json({ error: "Amount must be positive" });
+      await logValidationError(
+        "Invalid off-ramp amount",
+        new Error("Amount must be positive"),
+        req,
+        { amount: sanitizedAmount }
+      );
+
+      return validationErrorResponse(res, "Amount must be positive", [
+        { field: "amount", message: "Amount must be greater than zero" },
+      ]);
     }
 
     if (!accountDetails) {
-      return res.status(400).json({ error: "Account details are required" });
+      await logValidationError(
+        "Missing account details",
+        new Error("Account details are required"),
+        req
+      );
+
+      return validationErrorResponse(res, "Account details are required", [
+        {
+          field: "accountDetails",
+          message: "Account details are required for off-ramp transactions",
+        },
+      ]);
     }
 
     // Validate account details based on payment method
@@ -43,9 +78,23 @@ export async function offRampTransaction(req: Request, res: Response) {
     } else if (accountDetails.accountNumber && accountDetails.ifsc) {
       // Bank account validation logic can be added here
     } else {
-      return res.status(400).json({
-        error: "Valid UPI ID or Bank account details are required",
-      });
+      await logValidationError(
+        "Invalid account details",
+        new Error("Valid UPI ID or Bank account details are required"),
+        req,
+        { accountDetails }
+      );
+
+      return validationErrorResponse(
+        res,
+        "Valid UPI ID or Bank account details are required",
+        [
+          {
+            field: "accountDetails",
+            message: "Provide either UPI ID or Bank account number with IFSC",
+          },
+        ]
+      );
     }
 
     // Create debit transaction record (money going out of wallet)
@@ -106,6 +155,16 @@ export async function offRampTransaction(req: Request, res: Response) {
         );
       } catch (walletError: any) {
         // If wallet debit fails after payment success, mark as PENDING_RECONCILIATION
+        await logExternalServiceError(
+          "Wallet debit failed after payment success",
+          walletError,
+          req,
+          {
+            transactionId: transaction.id,
+            paymentId: paymentResponse.payment.id,
+          }
+        );
+
         await prisma.transaction.update({
           where: { id: transaction.id },
           data: {
@@ -120,14 +179,22 @@ export async function offRampTransaction(req: Request, res: Response) {
           },
         });
 
-        return res.status(202).json({
-          transactionId: transaction.id,
-          ledgerEntryId: walletResponse?.ledgerEntryId,
-          status: "PENDING",
-          message:
-            "Payment successful but wallet update failed. Transaction will be reconciled.",
-          paymentReferenceId: paymentResponse.referenceId,
-        });
+        return successResponse(
+          res,
+          202,
+          "Payment successful but wallet update failed. Transaction will be reconciled.",
+          {
+            transactionId: transaction.id,
+            ledgerEntryId: walletResponse?.ledgerEntryId,
+            status: "PENDING",
+            paymentReferenceId: paymentResponse.referenceId,
+          },
+          {
+            needsReconciliation: true,
+            paymentStatus: "SUCCESS",
+            walletStatus: "PENDING",
+          }
+        );
       }
 
       // Update transaction status to SUCCESS
@@ -149,19 +216,37 @@ export async function offRampTransaction(req: Request, res: Response) {
         },
       });
 
-      return res.status(201).json({
-        transactionId: transaction.id,
-        status: updatedTransaction.status,
-        amount: transaction.amount.toString(),
-        currency: transaction.currency,
-        balance: walletResponse.balance,
-        paymentMethod: paymentResponse.paymentMethod,
-        referenceId: paymentResponse.referenceId,
-        ledgerEntryId: walletResponse.ledgerEntryId,
-        message: "Off-ramp transaction successful",
-      });
+      return successResponse(
+        res,
+        201,
+        "Off-ramp transaction successful",
+        {
+          transactionId: transaction.id,
+          status: updatedTransaction.status,
+          amount: transaction.amount.toString(),
+          currency: transaction.currency,
+          balance: walletResponse.balance,
+          paymentMethod: paymentResponse.paymentMethod,
+          referenceId: paymentResponse.referenceId,
+          ledgerEntryId: walletResponse.ledgerEntryId,
+        },
+        {
+          transactionType: "OFFRAMP",
+          flow: "DEBIT",
+        }
+      );
     } catch (paymentError: any) {
       // Update transaction status to FAILED
+      await logExternalServiceError(
+        "Payment service error during off-ramp",
+        paymentError,
+        req,
+        {
+          transactionId: transaction.id,
+          amount: sanitizedAmount,
+        }
+      );
+
       await prisma.transaction.update({
         where: { id: transaction.id },
         data: {
@@ -175,13 +260,17 @@ export async function offRampTransaction(req: Request, res: Response) {
       });
 
       // Return payment service error
-      return res.status(paymentError.statusCode || 500).json({
-        error: paymentError.message || "Off-ramp transaction failed",
-        transactionId: transaction.id,
-      });
+      return errorResponse(
+        res,
+        paymentError.statusCode || 500,
+        paymentError.message || "Off-ramp transaction failed",
+        paymentError,
+        ErrorType.EXTERNAL_SERVICE_ERROR,
+        { transactionId: transaction.id }
+      );
     }
   } catch (error: any) {
     console.error("Error in offRampTransaction:", error);
-    return handleTransactionError(error, res);
+    return handleTransactionError(error, res, req);
   }
 }

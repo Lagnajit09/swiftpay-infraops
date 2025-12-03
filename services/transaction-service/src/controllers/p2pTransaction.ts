@@ -3,6 +3,18 @@ import prisma from "../lib/db";
 import { idempotencyHeader, sanitizeInput } from "../utils/validation";
 import { p2pTransfer } from "../lib/walletProxy";
 import { handleTransactionError } from "../utils/helpers";
+import {
+  successResponse,
+  authErrorResponse,
+  validationErrorResponse,
+  errorResponse,
+  ErrorType,
+} from "../utils/responseFormatter";
+import {
+  logValidationError,
+  logExternalServiceError,
+  logInternalError,
+} from "../utils/errorLogger";
 
 // POST /api/txn/p2p - Peer-to-peer transaction
 export async function p2pTransaction(req: Request, res: Response) {
@@ -12,24 +24,56 @@ export async function p2pTransaction(req: Request, res: Response) {
     const { recipientUserId, amount, description, paymentMethodId } = req.body;
 
     if (!userId) {
-      return res
-        .status(404)
-        .json({ error: "Unauthorized! UserID is missing." });
+      return authErrorResponse(
+        res,
+        "Unauthorized! UserID is missing.",
+        "User ID not found in request",
+        { userId: userId || "unknown" }
+      );
     }
 
     const sanitizedAmount = sanitizeInput.amount(amount);
     const sanitizedDesc = sanitizeInput.description(description);
 
     if (BigInt(sanitizedAmount) <= 0) {
-      return res.status(400).json({ error: "Amount must be positive" });
+      await logValidationError(
+        "Invalid P2P amount",
+        new Error("Amount must be positive"),
+        req,
+        { amount: sanitizedAmount }
+      );
+
+      return validationErrorResponse(res, "Amount must be positive", [
+        { field: "amount", message: "Amount must be greater than zero" },
+      ]);
     }
 
     if (!recipientUserId) {
-      return res.status(400).json({ error: "Recipient user ID is required" });
+      await logValidationError(
+        "Missing recipient user ID",
+        new Error("Recipient user ID is required"),
+        req
+      );
+
+      return validationErrorResponse(res, "Recipient user ID is required", [
+        { field: "recipientUserId", message: "Recipient user ID is required" },
+      ]);
     }
 
     if (String(userId) === String(recipientUserId)) {
-      return res.status(400).json({ error: "Cannot transfer to yourself" });
+      await logValidationError(
+        "Self-transfer attempt",
+        new Error("Cannot transfer to yourself"),
+        req,
+        { userId, recipientUserId }
+      );
+
+      return validationErrorResponse(res, "Cannot transfer to yourself", [
+        {
+          field: "recipientUserId",
+          message: "Sender and recipient cannot be the same",
+        },
+      ]);
     }
 
     // Start database transaction for creating debit transaction record of the sender
@@ -118,19 +162,38 @@ export async function p2pTransaction(req: Request, res: Response) {
         },
       });
 
-      return res.status(201).json({
-        transactionId: {
-          debit_transaction: debitTransaction.id,
-          credit_transaction: creditTransaction.id,
+      return successResponse(
+        res,
+        201,
+        "P2P transfer successful",
+        {
+          transactionId: {
+            debit_transaction: debitTransaction.id,
+            credit_transaction: creditTransaction.id,
+          },
+          status: updatedDebitTransaction.status,
+          amount: debitTransaction.amount.toString(),
+          currency: debitTransaction.currency,
+          senderBalance: walletResponse.senderBalance,
         },
-        status: updatedDebitTransaction.status,
-        amount: debitTransaction.amount.toString(),
-        currency: debitTransaction.currency,
-        senderBalance: walletResponse.senderBalance,
-        message: "P2P transfer successful",
-      });
+        {
+          transactionType: "P2P",
+          flow: "TRANSFER",
+        }
+      );
     } catch (walletError: any) {
       // Update transaction status to FAILED
+      await logExternalServiceError(
+        "Wallet service error during P2P transfer",
+        walletError,
+        req,
+        {
+          debitTransactionId: debitTransaction.id,
+          creditTransactionId: creditTransaction.id,
+          amount: sanitizedAmount,
+        }
+      );
+
       await prisma.transaction.update({
         where: { id: debitTransaction.id },
         data: {
@@ -155,13 +218,17 @@ export async function p2pTransaction(req: Request, res: Response) {
       });
 
       // Return wallet service error
-      return res.status(walletError.statusCode || 500).json({
-        error: walletError.message || "P2P transfer failed",
-        transactionId: debitTransaction.id,
-      });
+      return errorResponse(
+        res,
+        walletError.statusCode || 500,
+        walletError.message || "P2P transfer failed",
+        walletError,
+        ErrorType.EXTERNAL_SERVICE_ERROR,
+        { transactionId: debitTransaction.id }
+      );
     }
   } catch (error: any) {
     console.error("Error in p2pTransaction:", error);
-    return handleTransactionError(error, res);
+    return handleTransactionError(error, res, req);
   }
 }
