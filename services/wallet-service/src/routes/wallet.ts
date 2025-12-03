@@ -5,6 +5,7 @@ import { getOrCreateMyWallet } from "../controllers/walletActions";
 import { p2pTxn } from "../controllers/p2pTransaction";
 import { credit } from "../controllers/credit";
 import { debit } from "../controllers/debit";
+import { serviceAuthMiddleware } from "../middlewares/serviceAuthMiddleware";
 
 const router = express.Router();
 
@@ -21,6 +22,7 @@ router.get("/health", (req, res) => {
 });
 
 router.use(generalLimiter);
+router.use(serviceAuthMiddleware);
 
 router.get("/", getOrCreateMyWallet);
 router.post("/credit", credit);
