@@ -1,4 +1,61 @@
 import { ipKeyGenerator } from "express-rate-limit";
+import { Request, Response } from "express";
+
+/**
+ * Rate limit info added by express-rate-limit middleware
+ */
+interface RateLimitInfo {
+  limit: number;
+  current: number;
+  remaining: number;
+  resetTime: Date;
+}
+
+/**
+ * Standard rate limit error response structure
+ */
+interface RateLimitErrorResponse {
+  success: false;
+  message: string;
+  error: {
+    code: string;
+    type: string;
+    details: string;
+  };
+  metadata?: {
+    retryAfter?: number;
+    limit?: number;
+    current?: number;
+  };
+}
+
+/**
+ * Create a standardized rate limit handler
+ */
+const createRateLimitHandler = (message: string) => {
+  return (req: Request, res: Response) => {
+    const rateLimitInfo = (req as any).rateLimit as RateLimitInfo | undefined;
+
+    const response: RateLimitErrorResponse = {
+      success: false,
+      message: "Rate limit exceeded",
+      error: {
+        code: "RATE_LIMIT_EXCEEDED",
+        type: "RATE_LIMIT_ERROR",
+        details: message,
+      },
+      metadata: {
+        retryAfter: rateLimitInfo?.resetTime
+          ? Math.ceil(rateLimitInfo.resetTime.getTime() / 1000)
+          : undefined,
+        limit: rateLimitInfo?.limit,
+        current: rateLimitInfo?.current,
+      },
+    };
+
+    res.status(429).json(response);
+  };
+};
 
 export const rateLimitConfig = {
   // ========================== AUTH OR USER RELATED ===========================
@@ -6,7 +63,9 @@ export const rateLimitConfig = {
   signin: {
     windowMs: 15 * 60 * 1000, // 15 minutes
     max: 3,
-    message: "Too many login attempts. Please try again in 15 minutes.",
+    handler: createRateLimitHandler(
+      "Too many login attempts. Please try again in 15 minutes."
+    ),
     standardHeaders: true,
     legacyHeaders: false,
     skipSuccessfulRequests: true,
@@ -17,7 +76,9 @@ export const rateLimitConfig = {
   signup: {
     windowMs: 60 * 60 * 1000, // 1 hour
     max: 3,
-    message: "Too many signup attempts. Please try again in 1 hour.",
+    handler: createRateLimitHandler(
+      "Too many signup attempts. Please try again in 1 hour."
+    ),
     standardHeaders: true,
     legacyHeaders: false,
   },
@@ -25,7 +86,9 @@ export const rateLimitConfig = {
   passwordReset: {
     windowMs: 60 * 60 * 1000, // 1 hour
     max: 3,
-    message: "Too many password reset requests. Please try again in 1 hour.",
+    handler: createRateLimitHandler(
+      "Too many password reset requests. Please try again in 1 hour."
+    ),
     standardHeaders: true,
     legacyHeaders: false,
     keyGenerator: (req: any) =>
@@ -35,8 +98,9 @@ export const rateLimitConfig = {
   emailVerification: {
     windowMs: 15 * 60 * 1000, // 15 minutes
     max: 5,
-    message:
-      "Too many email verification attempts. Please try again in 15 minutes.",
+    handler: createRateLimitHandler(
+      "Too many email verification attempts. Please try again in 15 minutes."
+    ),
     standardHeaders: true,
     legacyHeaders: false,
   },
@@ -44,7 +108,9 @@ export const rateLimitConfig = {
   updateUserLimiter: {
     windowMs: 15 * 60 * 1000, // 15 minutes
     max: 10,
-    message: "Too many profile update attempts. Please try again later.",
+    handler: createRateLimitHandler(
+      "Too many profile update attempts. Please try again later."
+    ),
     standardHeaders: true,
     legacyHeaders: false,
   },
@@ -55,7 +121,9 @@ export const rateLimitConfig = {
   createWallet: {
     windowMs: 60 * 60 * 1000, // 1 hour
     max: 5,
-    message: "Too many wallet creation attempts. Please try again in 1 hour.",
+    handler: createRateLimitHandler(
+      "Too many wallet creation attempts. Please try again in 1 hour."
+    ),
     standardHeaders: true,
     legacyHeaders: false,
     keyGenerator: (req: any) =>
@@ -66,7 +134,9 @@ export const rateLimitConfig = {
   balanceCheck: {
     windowMs: 15 * 60 * 1000, // 15 minutes
     max: 100,
-    message: "Too many balance check requests. Please try again in 15 minutes.",
+    handler: createRateLimitHandler(
+      "Too many balance check requests. Please try again in 15 minutes."
+    ),
     standardHeaders: true,
     legacyHeaders: false,
   },
@@ -75,8 +145,9 @@ export const rateLimitConfig = {
   p2pTransaction: {
     windowMs: 15 * 60 * 1000, // 15 minutes
     max: 20,
-    message:
-      "Too many P2P transaction attempts. Please try again in 15 minutes.",
+    handler: createRateLimitHandler(
+      "Too many P2P transaction attempts. Please try again in 15 minutes."
+    ),
     standardHeaders: true,
     legacyHeaders: false,
     keyGenerator: (req: any) =>
@@ -87,7 +158,9 @@ export const rateLimitConfig = {
   bankTransfer: {
     windowMs: 30 * 60 * 1000, // 30 minutes
     max: 20,
-    message: "Too many bank transfer attempts. Please try again in 30 minutes.",
+    handler: createRateLimitHandler(
+      "Too many bank transfer attempts. Please try again in 30 minutes."
+    ),
     standardHeaders: true,
     legacyHeaders: false,
     keyGenerator: (req: any) =>
@@ -98,7 +171,9 @@ export const rateLimitConfig = {
   transactionHistory: {
     windowMs: 15 * 60 * 1000, // 15 minutes
     max: 50,
-    message: "Too many history requests. Please try again in 15 minutes.",
+    handler: createRateLimitHandler(
+      "Too many history requests. Please try again in 15 minutes."
+    ),
     standardHeaders: true,
     legacyHeaders: false,
   },
@@ -107,8 +182,9 @@ export const rateLimitConfig = {
   addressGeneration: {
     windowMs: 60 * 60 * 1000, // 1 hour
     max: 10,
-    message:
-      "Too many address generation requests. Please try again in 1 hour.",
+    handler: createRateLimitHandler(
+      "Too many address generation requests. Please try again in 1 hour."
+    ),
     standardHeaders: true,
     legacyHeaders: false,
     keyGenerator: (req: any) =>
@@ -119,7 +195,9 @@ export const rateLimitConfig = {
   general: {
     windowMs: 15 * 60 * 1000, // 15 minutes
     max: 50,
-    message: "Too many requests. Please try again later.",
+    handler: createRateLimitHandler(
+      "Too many requests. Please try again later."
+    ),
     standardHeaders: true,
     legacyHeaders: false,
   },

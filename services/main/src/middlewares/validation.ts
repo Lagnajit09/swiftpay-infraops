@@ -1,8 +1,14 @@
 import { z } from "zod";
+import {
+  validationErrorResponse,
+  errorResponse,
+  ErrorType,
+} from "../utils/responseFormatter";
+import { logValidationError, logInternalError } from "../utils/errorLogger";
 
 // Validation middleware helper
 export const validateRequest = (schema: z.ZodSchema) => {
-  return (req: any, res: any, next: any) => {
+  return async (req: any, res: any, next: any) => {
     try {
       // Assemble all data for validation
       const dataToValidate = {
@@ -20,17 +26,30 @@ export const validateRequest = (schema: z.ZodSchema) => {
           message: err.message,
         }));
 
-        return res.status(400).json({
-          message: "Validation failed",
-          errors,
-        });
+        await logValidationError(
+          "Request validation failed",
+          new Error("Validation failed"),
+          req,
+          { errors }
+        );
+
+        return validationErrorResponse(res, "Validation failed", errors);
       }
 
       req.validatedData = result.data;
       next();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Validation middleware error:", error);
-      res.status(500).json({ message: "Internal server error" });
+
+      await logInternalError("Validation middleware error", error, req);
+
+      return errorResponse(
+        res,
+        500,
+        "Internal server error",
+        error,
+        ErrorType.INTERNAL_ERROR
+      );
     }
   };
 };

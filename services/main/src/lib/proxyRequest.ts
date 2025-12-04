@@ -1,6 +1,11 @@
 import { Request, Response } from "express";
 import axios from "axios";
 import "dotenv/config";
+import { errorResponse, ErrorType } from "../utils/responseFormatter";
+import {
+  logExternalServiceError,
+  logInternalError,
+} from "../utils/errorLogger";
 
 type HttpMethod = "get" | "post" | "put" | "delete";
 
@@ -10,8 +15,8 @@ const SERVICE_URLS: Record<string, string> = {
   wallet: process.env.WALLET_SERVICE_URL || "http://localhost:5002",
   transaction: process.env.TRANSACTION_SERVICE_URL || "http://localhost:5003",
   // Add more services here as needed
-  // payment: process.env.PAYMENT_SERVICE_URL || "http://localhost:5003",
-  // notification: process.env.NOTIFICATION_SERVICE_URL || "http://localhost:5004",
+  // payment: process.env.PAYMENT_SERVICE_URL || "http://localhost:5004",
+  // notification: process.env.NOTIFICATION_SERVICE_URL || "http://localhost:5005",
 };
 
 /**
@@ -86,7 +91,7 @@ export function proxyRequest(
         headersToForward["x-user-id"] = req.user.userId;
       }
 
-      // If request is to wallet-service, pass idempotency-key header
+      // If request is to transaction-service, pass idempotency-key header
       if (detectedService === "transaction" && req.headers["idempotency-key"]) {
         headersToForward["idempotency-key"] = req.headers["idempotency-key"];
       }
@@ -135,23 +140,64 @@ export function proxyRequest(
       }
 
       if (error.code === "ECONNREFUSED") {
-        return res.status(503).json({
-          message: "Service unavailable",
-          error: `Cannot connect to service at ${serviceUrl}`,
-        });
+        await logExternalServiceError(
+          `Service unavailable: ${detectedService}`,
+          error,
+          req,
+          { service: detectedService, serviceUrl }
+        );
+
+        return errorResponse(
+          res,
+          503,
+          "Service unavailable",
+          error,
+          ErrorType.EXTERNAL_SERVICE_ERROR,
+          {
+            service: detectedService,
+            details: `Cannot connect to ${detectedService} service at ${serviceUrl}`,
+          }
+        );
       }
 
       if (error.code === "ETIMEDOUT" || error.code === "ECONNABORTED") {
-        return res.status(504).json({
-          message: "Request timeout",
-          error: "Service took too long to respond",
-        });
+        await logExternalServiceError(
+          `Service timeout: ${detectedService}`,
+          error,
+          req,
+          { service: detectedService, serviceUrl }
+        );
+
+        return errorResponse(
+          res,
+          504,
+          "Request timeout",
+          error,
+          ErrorType.EXTERNAL_SERVICE_ERROR,
+          {
+            service: detectedService,
+            details: "Service took too long to respond",
+          }
+        );
       }
 
-      return res.status(500).json({
-        message: "Proxy error",
-        error: error.message,
+      await logInternalError("Proxy error", error, req, {
+        service: detectedService,
+        serviceUrl,
+        method,
+        path,
       });
+
+      return errorResponse(
+        res,
+        500,
+        "Proxy error",
+        error,
+        ErrorType.INTERNAL_ERROR,
+        {
+          service: detectedService,
+        }
+      );
     }
   };
 }

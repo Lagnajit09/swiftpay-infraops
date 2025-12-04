@@ -1,5 +1,11 @@
 import { Request, Response, NextFunction } from "express";
 import { introspectSession } from "../lib/authClient";
+import {
+  authErrorResponse,
+  errorResponse,
+  ErrorType,
+} from "../utils/responseFormatter";
+import { logInternalError } from "../utils/errorLogger";
 
 export async function requireAuth(
   req: Request,
@@ -10,19 +16,42 @@ export async function requireAuth(
     const sid =
       (req as any).cookies?.sessionId ||
       req.headers["x-session-id"]?.toString();
-    if (!sid)
-      return res
-        .status(401)
-        .json({ error: "No session found. Please signin first." });
+
+    if (!sid) {
+      return authErrorResponse(
+        res,
+        "No session found. Please signin first.",
+        "Session ID not found in cookies or headers",
+        { hasSessionCookie: !!(req as any).cookies?.sessionId }
+      );
+    }
 
     const user = await introspectSession(sid);
-    if (!user?.userId)
-      return res.status(401).json({ error: "Invalid or expired session." });
+
+    if (!user?.userId) {
+      return authErrorResponse(
+        res,
+        "Invalid or expired session.",
+        "Session verification returned invalid user data",
+        { sessionId: sid.substring(0, 10) + "..." }
+      );
+    }
 
     req.user = user;
     next();
-  } catch (err) {
-    console.log(err);
-    return res.status(401).json({ error: "Unauthorized." });
+  } catch (err: any) {
+    console.error("Authentication error:", err);
+
+    await logInternalError("Authentication middleware error", err, req, {
+      hasSessionCookie: !!(req as any).cookies?.sessionId,
+      hasSessionHeader: !!req.headers["x-session-id"],
+    });
+
+    return authErrorResponse(
+      res,
+      "Unauthorized.",
+      err.message || "Authentication failed",
+      { authenticated: false }
+    );
   }
 }

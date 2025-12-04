@@ -7,6 +7,11 @@ import helmet from "helmet";
 import cookieParser from "cookie-parser";
 import dotenv from "dotenv";
 import cors from "cors";
+import {
+  successResponse,
+  errorResponse,
+  ErrorType,
+} from "./utils/responseFormatter";
 
 dotenv.config();
 
@@ -57,7 +62,11 @@ const corsOptions = {
 app.use(cors(corsOptions));
 
 app.get("/", (req, res) => {
-  res.send("Hello from SwiftPay-Main-Server!");
+  return successResponse(res, 200, "SwiftPay Main Service is running", {
+    service: "main-service",
+    version: "1.0.0",
+    status: "healthy",
+  });
 });
 
 app.use(cookieParser());
@@ -76,16 +85,25 @@ app.use(
     next: express.NextFunction
   ) => {
     console.error("Unhandled error:", err);
-    res.status(500).json({
-      message: "Internal server error",
-      error: process.env.NODE_ENV === "development" ? err.message : undefined,
-    });
+    return errorResponse(
+      res,
+      500,
+      "Internal server error",
+      err,
+      ErrorType.INTERNAL_ERROR
+    );
   }
 );
 
 // Handle 404
 app.use((req: express.Request, res: express.Response) => {
-  res.status(404).json({ message: "Route not found" });
+  return errorResponse(
+    res,
+    404,
+    "Route not found",
+    new Error(`Cannot ${req.method} ${req.path}`),
+    ErrorType.NOT_FOUND_ERROR
+  );
 });
 
 // Handle unhandled promise rejections
