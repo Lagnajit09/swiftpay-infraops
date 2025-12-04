@@ -4,6 +4,18 @@ import prisma from "../lib/db";
 import { processBankOnRamp, processBankOffRamp } from "../lib/bankReq";
 import { OffRampRequestBody, OnRampRequestBody } from "../types/types";
 import { idempotencyHeader, sanitizeInput } from "../utils/validation";
+import {
+  successResponse,
+  authErrorResponse,
+  validationErrorResponse,
+  errorResponse,
+  ErrorType,
+} from "../utils/responseFormatter";
+import {
+  logValidationError,
+  logExternalServiceError,
+  logInternalError,
+} from "../utils/errorLogger";
 
 /**
  * Controller for handling on-ramp (money in) payments
@@ -68,22 +80,41 @@ export async function handleOnRamp(req: Request, res: Response) {
       isNaN(sanitizedAmount) ||
       sanitizedAmount <= 0
     ) {
-      return res.status(400).json({
-        success: false,
-        error: "Invalid request parameters",
-        message: "userId, walletId, and valid amount are required",
-      });
+      await logValidationError(
+        "Invalid on-ramp request parameters",
+        new Error("userId, walletId, and valid amount are required"),
+        req,
+        {
+          userId: sanitizedUserId,
+          walletId: sanitizedWalletId,
+          amount: sanitizedAmount,
+        }
+      );
+
+      return validationErrorResponse(res, "Invalid request parameters", [
+        { field: "userId", message: "User ID is required" },
+        { field: "walletId", message: "Wallet ID is required" },
+        { field: "amount", message: "Valid positive amount is required" },
+      ]);
     }
 
     if (
       !sanitizedAccountDetails ||
       (!sanitizedAccountDetails.accountNumber && !sanitizedAccountDetails.upiId)
     ) {
-      return res.status(400).json({
-        success: false,
-        error: "Invalid account details",
-        message: "Account number or UPI ID is required",
-      });
+      await logValidationError(
+        "Invalid account details for on-ramp",
+        new Error("Account number or UPI ID is required"),
+        req,
+        { accountDetails: sanitizedAccountDetails }
+      );
+
+      return validationErrorResponse(res, "Invalid account details", [
+        {
+          field: "accountDetails",
+          message: "Account number or UPI ID is required",
+        },
+      ]);
     }
 
     // Check for duplicate request using idempotency key
@@ -98,14 +129,21 @@ export async function handleOnRamp(req: Request, res: Response) {
       });
 
       if (existingPayment) {
-        return res.status(200).json({
-          success: existingPayment.status === PaymentStatus.SUCCESS,
-          payment: {
-            ...existingPayment,
-            amount: Number(existingPayment.amount),
+        return successResponse(
+          res,
+          200,
+          "Request already processed (idempotent)",
+          {
+            payment: {
+              ...existingPayment,
+              amount: Number(existingPayment.amount),
+            },
           },
-          message: "Request already processed (idempotent)",
-        });
+          {
+            idempotent: true,
+            originalStatus: existingPayment.status,
+          }
+        );
       }
     }
 
@@ -182,26 +220,72 @@ export async function handleOnRamp(req: Request, res: Response) {
     });
 
     if (bankResponse.success) {
-      return res.status(200).json({
-        success: true,
-        payment: { ...updatedPayment, amount: Number(updatedPayment.amount) },
-        message: "On-ramp payment processed successfully",
-      });
+      return successResponse(
+        res,
+        200,
+        "On-ramp payment processed successfully",
+        {
+          payment: {
+            id: updatedPayment.id,
+            status: updatedPayment.status,
+            amount: Number(updatedPayment.amount),
+            currency: updatedPayment.currency,
+            transactionId: updatedPayment.transactionId,
+            gatewayReference: updatedPayment.gatewayReference,
+          },
+          paymentMethod: sanitizedAccountDetails.upiId
+            ? "UPI"
+            : "BANK_TRANSFER",
+          referenceId: updatedPayment.gatewayReference || updatedPayment.id,
+        },
+        {
+          paymentType: "ONRAMP",
+          attemptNumber: 1,
+        }
+      );
     } else {
-      return res.status(400).json({
-        success: false,
-        payment: { ...updatedPayment, amount: Number(updatedPayment.amount) },
-        error: bankResponse.errorCode,
-        message: bankResponse.errorMessage || "Payment processing failed",
-      });
+      await logExternalServiceError(
+        "Bank gateway error during on-ramp",
+        new Error(bankResponse.errorMessage || "Payment processing failed"),
+        req,
+        {
+          paymentId: payment.id,
+          errorCode: bankResponse.errorCode,
+          gateway: sanitizedAccountDetails.bankName || "DEMO_BANK",
+        }
+      );
+
+      return errorResponse(
+        res,
+        400,
+        bankResponse.errorMessage || "Payment processing failed",
+        new Error(bankResponse.errorCode || "PAYMENT_FAILED"),
+        ErrorType.EXTERNAL_SERVICE_ERROR,
+        {
+          payment: {
+            id: updatedPayment.id,
+            status: updatedPayment.status,
+            amount: Number(updatedPayment.amount),
+          },
+          errorCode: bankResponse.errorCode,
+        }
+      );
     }
   } catch (error: any) {
     console.error("Error in handleOnRamp:", error);
-    return res.status(500).json({
-      success: false,
-      error: "INTERNAL_ERROR",
-      message: error.message || "Internal server error",
+
+    await logInternalError("On-ramp payment processing error", error, req, {
+      walletId: req.body?.walletId,
+      amount: req.body?.amount,
     });
+
+    return errorResponse(
+      res,
+      500,
+      "Internal server error during payment processing",
+      error,
+      ErrorType.INTERNAL_ERROR
+    );
   }
 }
 
@@ -268,22 +352,41 @@ export async function handleOffRamp(req: Request, res: Response) {
       isNaN(sanitizedAmount) ||
       sanitizedAmount <= 0
     ) {
-      return res.status(400).json({
-        success: false,
-        error: "Invalid request parameters",
-        message: "userId, walletId, and valid amount are required",
-      });
+      await logValidationError(
+        "Invalid off-ramp request parameters",
+        new Error("userId, walletId, and valid amount are required"),
+        req,
+        {
+          userId: sanitizedUserId,
+          walletId: sanitizedWalletId,
+          amount: sanitizedAmount,
+        }
+      );
+
+      return validationErrorResponse(res, "Invalid request parameters", [
+        { field: "userId", message: "User ID is required" },
+        { field: "walletId", message: "Wallet ID is required" },
+        { field: "amount", message: "Valid positive amount is required" },
+      ]);
     }
 
     if (
       !sanitizedAccountDetails ||
       (!sanitizedAccountDetails.accountNumber && !sanitizedAccountDetails.upiId)
     ) {
-      return res.status(400).json({
-        success: false,
-        error: "Invalid account details",
-        message: "Account number or UPI ID is required for withdrawal",
-      });
+      await logValidationError(
+        "Invalid account details for off-ramp",
+        new Error("Account number or UPI ID is required for withdrawal"),
+        req,
+        { accountDetails: sanitizedAccountDetails }
+      );
+
+      return validationErrorResponse(res, "Invalid account details", [
+        {
+          field: "accountDetails",
+          message: "Account number or UPI ID is required for withdrawal",
+        },
+      ]);
     }
 
     // Check for duplicate request using idempotency key
@@ -298,14 +401,21 @@ export async function handleOffRamp(req: Request, res: Response) {
       });
 
       if (existingPayment) {
-        return res.status(200).json({
-          success: existingPayment.status === PaymentStatus.SUCCESS,
-          payment: {
-            ...existingPayment,
-            amount: Number(existingPayment.amount),
+        return successResponse(
+          res,
+          200,
+          "Request already processed (idempotent)",
+          {
+            payment: {
+              ...existingPayment,
+              amount: Number(existingPayment.amount),
+            },
           },
-          message: "Request already processed (idempotent)",
-        });
+          {
+            idempotent: true,
+            originalStatus: existingPayment.status,
+          }
+        );
       }
     }
 
@@ -382,25 +492,71 @@ export async function handleOffRamp(req: Request, res: Response) {
     });
 
     if (bankResponse.success) {
-      return res.status(200).json({
-        success: true,
-        payment: { ...updatedPayment, amount: Number(updatedPayment.amount) },
-        message: "Off-ramp payment processed successfully",
-      });
+      return successResponse(
+        res,
+        200,
+        "Off-ramp payment processed successfully",
+        {
+          payment: {
+            id: updatedPayment.id,
+            status: updatedPayment.status,
+            amount: Number(updatedPayment.amount),
+            currency: updatedPayment.currency,
+            transactionId: updatedPayment.transactionId,
+            gatewayReference: updatedPayment.gatewayReference,
+          },
+          paymentMethod: sanitizedAccountDetails.upiId
+            ? "UPI"
+            : "BANK_TRANSFER",
+          referenceId: updatedPayment.gatewayReference || updatedPayment.id,
+        },
+        {
+          paymentType: "OFFRAMP",
+          attemptNumber: 1,
+        }
+      );
     } else {
-      return res.status(400).json({
-        success: false,
-        payment: { ...updatedPayment, amount: Number(updatedPayment.amount) },
-        error: bankResponse.errorCode,
-        message: bankResponse.errorMessage || "Payment processing failed",
-      });
+      await logExternalServiceError(
+        "Bank gateway error during off-ramp",
+        new Error(bankResponse.errorMessage || "Payment processing failed"),
+        req,
+        {
+          paymentId: payment.id,
+          errorCode: bankResponse.errorCode,
+          gateway: sanitizedAccountDetails.bankName || "DEMO_BANK",
+        }
+      );
+
+      return errorResponse(
+        res,
+        400,
+        bankResponse.errorMessage || "Payment processing failed",
+        new Error(bankResponse.errorCode || "PAYMENT_FAILED"),
+        ErrorType.EXTERNAL_SERVICE_ERROR,
+        {
+          payment: {
+            id: updatedPayment.id,
+            status: updatedPayment.status,
+            amount: Number(updatedPayment.amount),
+          },
+          errorCode: bankResponse.errorCode,
+        }
+      );
     }
   } catch (error: any) {
     console.error("Error in handleOffRamp:", error);
-    return res.status(500).json({
-      success: false,
-      error: "INTERNAL_ERROR",
-      message: error.message || "Internal server error",
+
+    await logInternalError("Off-ramp payment processing error", error, req, {
+      walletId: req.body?.walletId,
+      amount: req.body?.amount,
     });
+
+    return errorResponse(
+      res,
+      500,
+      "Internal server error during payment processing",
+      error,
+      ErrorType.INTERNAL_ERROR
+    );
   }
 }
