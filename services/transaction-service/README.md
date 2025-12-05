@@ -471,16 +471,417 @@ Content-Type: application/json
 
 ---
 
+### 5. Get All Transactions
+
+**Endpoint:** `GET /api/transaction/all`
+
+**Description:** Retrieve all transactions for a user with filtering, pagination, and sorting capabilities
+
+**Authentication:** Service authentication + User ID required
+
+**Request Headers:**
+
+```
+x-service-id: main-service
+x-service-secret: <service-secret>
+x-user-id: 123
+Content-Type: application/json
+```
+
+**Query Parameters:**
+
+- `walletId` (string, optional): Filter by wallet ID
+- `type` (string, optional): Filter by type (`CREDIT` or `DEBIT`)
+- `flow` (string, optional): Filter by flow (`ONRAMP`, `OFFRAMP`, or `P2P`)
+- `status` (string, optional): Filter by status (`PENDING`, `SUCCESS`, `FAILED`, `CANCELLED`)
+- `startDate` (string, optional): Filter transactions after this date (ISO 8601)
+- `endDate` (string, optional): Filter transactions before this date (ISO 8601)
+- `page` (number, optional): Page number (default: 1)
+- `limit` (number, optional): Items per page (default: 20)
+- `sortBy` (string, optional): Sort field (default: "createdAt")
+- `sortOrder` (string, optional): Sort order (`asc` or `desc`, default: "desc")
+
+**Request:**
+
+```http
+GET /api/transaction/all?page=1&limit=10&status=SUCCESS&sortOrder=desc
+```
+
+**Success Response (200):**
+
+```json
+{
+  "success": true,
+  "message": "Transactions retrieved successfully",
+  "data": {
+    "transactions": [
+      {
+        "id": "txn_abc123",
+        "userId": "123",
+        "walletId": "wallet_abc123",
+        "amount": "50000",
+        "currency": "INR",
+        "type": "CREDIT",
+        "flow": "ONRAMP",
+        "status": "SUCCESS",
+        "description": "Add money to wallet",
+        "paymentMethodId": "pm_upi_123",
+        "ledgerReferenceId": "ledger_def456",
+        "paymentReferenceId": "pay_ref_xyz789",
+        "createdAt": "2025-12-05T10:00:00.000Z",
+        "updatedAt": "2025-12-05T10:00:05.000Z"
+      }
+    ],
+    "pagination": {
+      "currentPage": 1,
+      "totalPages": 5,
+      "totalCount": 47,
+      "limit": 10
+    }
+  }
+}
+```
+
+---
+
+### 6. Get Transaction by ID
+
+**Endpoint:** `GET /api/transaction/:transactionId`
+
+**Description:** Get detailed information about a specific transaction, including enriched data from wallet and payment services
+
+**Authentication:** Service authentication + User ID required
+
+**URL Parameters:**
+
+- `transactionId` (string, required): Transaction ID
+
+**Request:**
+
+```http
+GET /api/transaction/txn_abc123
+x-service-id: main-service
+x-service-secret: <service-secret>
+x-user-id: 123
+```
+
+**Success Response (200):**
+
+```json
+{
+  "success": true,
+  "message": "Transaction details retrieved successfully",
+  "data": {
+    "id": "txn_abc123",
+    "userId": "123",
+    "walletId": "wallet_abc123",
+    "amount": "50000",
+    "currency": "INR",
+    "type": "CREDIT",
+    "flow": "ONRAMP",
+    "status": "SUCCESS",
+    "description": "Add money to wallet",
+    "paymentMethodId": "pm_upi_123",
+    "ledgerReferenceId": "ledger_def456",
+    "paymentReferenceId": "pay_ref_xyz789",
+    "metadata": {
+      "accountDetails": {
+        "upiId": "user@upi"
+      }
+    },
+    "createdAt": "2025-12-05T10:00:00.000Z",
+    "updatedAt": "2025-12-05T10:00:05.000Z",
+    "ledgerEntry": {
+      "id": "ledger_def456",
+      "amount": "50000",
+      "balance": "1050000"
+    },
+    "paymentDetails": {
+      "id": "pay_ref_xyz789",
+      "method": "UPI",
+      "status": "SUCCESS"
+    },
+    "relatedTransaction": null
+  }
+}
+```
+
+**Error Response (404):**
+
+```json
+{
+  "success": false,
+  "message": "Transaction not found",
+  "error": {
+    "code": "NOT_FOUND",
+    "type": "NOT_FOUND_ERROR",
+    "details": "No transaction found for transactionId: txn_invalid"
+  },
+  "metadata": {
+    "transactionId": "txn_invalid"
+  }
+}
+```
+
+---
+
+### 7. Get Wallet Transactions
+
+**Endpoint:** `GET /api/transaction/wallet/:walletId`
+
+**Description:** Get all transactions for a specific wallet with filtering and pagination
+
+**Authentication:** Service authentication + User ID required
+
+**URL Parameters:**
+
+- `walletId` (string, required): Wallet ID
+
+**Query Parameters:**
+
+- `type` (string, optional): Filter by type (`CREDIT` or `DEBIT`)
+- `flow` (string, optional): Filter by flow (`ONRAMP`, `OFFRAMP`, or `P2P`)
+- `status` (string, optional): Filter by status
+- `startDate` (string, optional): Start date filter (ISO 8601)
+- `endDate` (string, optional): End date filter (ISO 8601)
+- `page` (number, optional): Page number (default: 1)
+- `limit` (number, optional): Items per page (default: 20)
+
+**Request:**
+
+```http
+GET /api/transaction/wallet/wallet_abc123?type=CREDIT&page=1&limit=20
+```
+
+**Success Response (200):**
+
+```json
+{
+  "success": true,
+  "message": "Wallet transactions retrieved successfully",
+  "data": {
+    "walletId": "wallet_abc123",
+    "transactions": [
+      {
+        "id": "txn_wallet_1",
+        "amount": "50000",
+        "type": "CREDIT",
+        "flow": "ONRAMP",
+        "status": "SUCCESS",
+        "createdAt": "2025-12-05T08:00:00.000Z"
+      }
+    ],
+    "pagination": {
+      "currentPage": 1,
+      "totalPages": 3,
+      "totalCount": 28,
+      "limit": 20
+    }
+  }
+}
+```
+
+---
+
+### 8. Get Transaction Summary
+
+**Endpoint:** `GET /api/transaction/summary`
+
+**Description:** Get aggregated transaction statistics for a user
+
+**Authentication:** Service authentication + User ID required
+
+**Query Parameters:**
+
+- `walletId` (string, optional): Filter by wallet ID
+- `startDate` (string, optional): Start date for summary (ISO 8601)
+- `endDate` (string, optional): End date for summary (ISO 8601)
+
+**Request:**
+
+```http
+GET /api/transaction/summary?walletId=wallet_abc123
+```
+
+**Success Response (200):**
+
+```json
+{
+  "success": true,
+  "message": "Transaction summary retrieved successfully",
+  "data": {
+    "summary": {
+      "totalTransactions": 47,
+      "credits": {
+        "count": 25,
+        "total": "1250000"
+      },
+      "debits": {
+        "count": 22,
+        "total": "1100000"
+      },
+      "onRamp": {
+        "count": 15,
+        "total": "750000"
+      },
+      "offRamp": {
+        "count": 12,
+        "total": "600000"
+      },
+      "p2p": {
+        "received": {
+          "count": 10,
+          "total": "500000"
+        },
+        "sent": {
+          "count": 10,
+          "total": "500000"
+        }
+      }
+    },
+    "recentTransactions": [
+      {
+        "id": "txn_recent_1",
+        "amount": "10000",
+        "type": "CREDIT",
+        "flow": "P2P",
+        "status": "SUCCESS",
+        "createdAt": "2025-12-05T09:30:00.000Z"
+      }
+    ]
+  }
+}
+```
+
+---
+
+### 9. Get Pending Transactions
+
+**Endpoint:** `GET /api/transaction/pending`
+
+**Description:** Get all pending transactions for a user
+
+**Authentication:** Service authentication + User ID required
+
+**Query Parameters:**
+
+- `walletId` (string, optional): Filter by wallet ID
+- `flow` (string, optional): Filter by flow (`ONRAMP`, `OFFRAMP`, or `P2P`)
+
+**Request:**
+
+```http
+GET /api/transaction/pending?flow=ONRAMP
+```
+
+**Success Response (200):**
+
+```json
+{
+  "success": true,
+  "message": "Pending transactions retrieved successfully",
+  "data": {
+    "count": 3,
+    "transactions": [
+      {
+        "id": "txn_pending_1",
+        "userId": "123",
+        "walletId": "wallet_abc123",
+        "amount": "25000",
+        "currency": "INR",
+        "type": "CREDIT",
+        "flow": "ONRAMP",
+        "status": "PENDING",
+        "description": "Add money",
+        "needsReconciliation": false,
+        "createdAt": "2025-12-05T09:45:00.000Z"
+      }
+    ]
+  }
+}
+```
+
+---
+
+### 10. Cancel Transaction
+
+**Endpoint:** `PATCH /api/transaction/:transactionId/cancel`
+
+**Description:** Cancel a pending transaction
+
+**Authentication:** Service authentication + User ID required
+
+**URL Parameters:**
+
+- `transactionId` (string, required): Transaction ID to cancel
+
+**Request Headers:**
+
+```
+x-service-id: main-service
+x-service-secret: <service-secret>
+x-user-id: 123
+Content-Type: application/json
+```
+
+**Request Body:**
+
+```json
+{
+  "reason": "User requested cancellation"
+}
+```
+
+**Request Body Parameters:**
+
+- `reason` (string, optional): Cancellation reason (max 500 characters)
+
+**Success Response (200):**
+
+```json
+{
+  "success": true,
+  "message": "Transaction cancelled successfully",
+  "data": {
+    "transactionId": "txn_pending_123",
+    "status": "CANCELLED",
+    "amount": "25000"
+  }
+}
+```
+
+**Error Responses:**
+
+**404 - Transaction Not Found or Cannot Be Cancelled:**
+
+```json
+{
+  "success": false,
+  "message": "Transaction not found or cannot be cancelled",
+  "error": {
+    "code": "NOT_FOUND",
+    "type": "NOT_FOUND_ERROR",
+    "details": "No transaction found or cannot be cancelled for transactionId: txn_pending_123"
+  },
+  "metadata": {
+    "transactionId": "txn_pending_123"
+  }
+}
+```
+
+---
+
 ## Error Codes Reference
 
-| Code                     | Type                     | HTTP Status | Description                      |
-| ------------------------ | ------------------------ | ----------- | -------------------------------- |
-| `AUTHENTICATION`         | `AUTHENTICATION_ERROR`   | 401         | Authentication failed            |
-| `VALIDATION`             | `VALIDATION_ERROR`       | 400         | Input validation failed          |
-| `CONFLICT`               | `CONFLICT_ERROR`         | 409         | Transaction conflict or deadlock |
-| `DATABASE`               | `DATABASE_ERROR`         | 503         | Database connection failed       |
-| `EXTERNAL_SERVICE_ERROR` | `EXTERNAL_SERVICE_ERROR` | 500         | Payment/Wallet service failed    |
-| `INTERNAL`               | `INTERNAL_ERROR`         | 500         | Internal server error            |
+| Code                     | Type                        | HTTP Status | Description                      |
+| ------------------------ | --------------------------- | ----------- | -------------------------------- |
+| `AUTHENTICATION`         | `AUTHENTICATION_ERROR`      | 401         | Authentication failed            |
+| `VALIDATION`             | `VALIDATION_ERROR`          | 400         | Input validation failed          |
+| `CONFLICT`               | `CONFLICT_ERROR`            | 409         | Transaction conflict or deadlock |
+| `RATE_LIMIT_EXCEEDED`    | `RATE_LIMIT_EXCEEDED_ERROR` | 429         | Rate limit exceeded              |
+| `DATABASE`               | `DATABASE_ERROR`            | 503         | Database connection failed       |
+| `EXTERNAL_SERVICE_ERROR` | `EXTERNAL_SERVICE_ERROR`    | 500         | Payment/Wallet service failed    |
+| `INTERNAL`               | `INTERNAL_ERROR`            | 500         | Internal server error            |
 
 ---
 

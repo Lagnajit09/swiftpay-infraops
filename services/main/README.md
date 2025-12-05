@@ -856,6 +856,401 @@ idempotency-key: offramp-unique-id-789 (optional)
 
 ---
 
+#### 5. Get All Transactions
+
+**Endpoint:** `GET /api/transaction/all`
+
+**Description:** Get all transactions for the authenticated user with filtering, pagination, and sorting
+
+**Authentication:** Required
+
+**Rate Limit:** 500 requests per 15 minutes per user
+
+**Query Parameters:**
+
+- `walletId` (string, optional): Filter by wallet ID
+- `type` (string, optional): Filter by type (`CREDIT` or `DEBIT`)
+- `flow` (string, optional): Filter by flow (`ONRAMP`, `OFFRAMP`, or `P2P`)
+- `status` (string, optional): Filter by status (`PENDING`, `SUCCESS`, `FAILED`, `CANCELLED`)
+- `startDate` (string, optional): Filter transactions after this date (ISO 8601 format)
+- `endDate` (string, optional): Filter transactions before this date (ISO 8601 format)
+- `page` (number, optional): Page number (default: 1)
+- `limit` (number, optional): Items per page (default: 20)
+- `sortBy` (string, optional): Sort field (default: "createdAt")
+- `sortOrder` (string, optional): Sort order (`asc` or `desc`, default: "desc")
+
+**Request:**
+
+```http
+GET /api/transaction/all?page=1&limit=10&status=SUCCESS&sortOrder=desc
+```
+
+**Success Response (200):**
+
+```json
+{
+  "success": true,
+  "message": "Transactions retrieved successfully",
+  "data": {
+    "transactions": [
+      {
+        "id": "txn_abc123",
+        "userId": "user_123",
+        "walletId": "wallet_abc123",
+        "amount": "50000",
+        "currency": "INR",
+        "type": "CREDIT",
+        "flow": "ONRAMP",
+        "status": "SUCCESS",
+        "description": "Add money to wallet",
+        "paymentMethodId": "pm_upi_123",
+        "ledgerReferenceId": "ledger_def456",
+        "paymentReferenceId": "pay_ref_xyz789",
+        "createdAt": "2025-12-05T10:00:00.000Z",
+        "updatedAt": "2025-12-05T10:00:05.000Z"
+      }
+    ],
+    "pagination": {
+      "currentPage": 1,
+      "totalPages": 5,
+      "totalCount": 47,
+      "limit": 10
+    }
+  }
+}
+```
+
+---
+
+#### 6. Get Transaction Summary
+
+**Endpoint:** `GET /api/transaction/summary`
+
+**Description:** Get aggregated transaction statistics for the authenticated user
+
+**Authentication:** Required
+
+**Rate Limit:** 500 requests per 15 minutes per user
+
+**Query Parameters:**
+
+- `walletId` (string, optional): Filter by wallet ID
+- `startDate` (string, optional): Start date for summary (ISO 8601 format)
+- `endDate` (string, optional): End date for summary (ISO 8601 format)
+
+**Request:**
+
+```http
+GET /api/transaction/summary?walletId=wallet_abc123
+```
+
+**Success Response (200):**
+
+```json
+{
+  "success": true,
+  "message": "Transaction summary retrieved successfully",
+  "data": {
+    "summary": {
+      "totalTransactions": 47,
+      "credits": {
+        "count": 25,
+        "total": "1250000"
+      },
+      "debits": {
+        "count": 22,
+        "total": "1100000"
+      },
+      "onRamp": {
+        "count": 15,
+        "total": "750000"
+      },
+      "offRamp": {
+        "count": 12,
+        "total": "600000"
+      },
+      "p2p": {
+        "received": {
+          "count": 10,
+          "total": "500000"
+        },
+        "sent": {
+          "count": 10,
+          "total": "500000"
+        }
+      }
+    },
+    "recentTransactions": [
+      {
+        "id": "txn_recent_1",
+        "amount": "10000",
+        "type": "CREDIT",
+        "flow": "P2P",
+        "status": "SUCCESS",
+        "createdAt": "2025-12-05T09:30:00.000Z"
+      }
+    ]
+  }
+}
+```
+
+---
+
+#### 7. Get Pending Transactions
+
+**Endpoint:** `GET /api/transaction/pending`
+
+**Description:** Get all pending transactions for the authenticated user
+
+**Authentication:** Required
+
+**Rate Limit:** 500 requests per 15 minutes per user
+
+**Query Parameters:**
+
+- `walletId` (string, optional): Filter by wallet ID
+- `flow` (string, optional): Filter by flow (`ONRAMP`, `OFFRAMP`, or `P2P`)
+
+**Request:**
+
+```http
+GET /api/transaction/pending?flow=ONRAMP
+```
+
+**Success Response (200):**
+
+```json
+{
+  "success": true,
+  "message": "Pending transactions retrieved successfully",
+  "data": {
+    "count": 3,
+    "transactions": [
+      {
+        "id": "txn_pending_1",
+        "userId": "user_123",
+        "walletId": "wallet_abc123",
+        "amount": "25000",
+        "currency": "INR",
+        "type": "CREDIT",
+        "flow": "ONRAMP",
+        "status": "PENDING",
+        "description": "Add money",
+        "needsReconciliation": false,
+        "createdAt": "2025-12-05T09:45:00.000Z"
+      }
+    ]
+  }
+}
+```
+
+---
+
+#### 8. Get Wallet Transactions
+
+**Endpoint:** `GET /api/transaction/get-wallet-transactions`
+
+**Description:** Get all transactions for the authenticated user's wallet
+
+**Authentication:** Required
+
+**Rate Limit:** 500 requests per 15 minutes per user
+
+**Query Parameters:**
+
+- `type` (string, optional): Filter by type (`CREDIT` or `DEBIT`)
+- `flow` (string, optional): Filter by flow (`ONRAMP`, `OFFRAMP`, or `P2P`)
+- `status` (string, optional): Filter by status (`PENDING`, `SUCCESS`, `FAILED`, `CANCELLED`)
+- `startDate` (string, optional): Start date filter (ISO 8601 format)
+- `endDate` (string, optional): End date filter (ISO 8601 format)
+- `page` (number, optional): Page number (default: 1)
+- `limit` (number, optional): Items per page (default: 20)
+
+**Request:**
+
+```http
+GET /api/transaction/get-wallet-transactions?type=CREDIT&page=1&limit=20
+```
+
+**Success Response (200):**
+
+```json
+{
+  "success": true,
+  "message": "Wallet transactions retrieved successfully",
+  "data": {
+    "walletId": "wallet_abc123",
+    "transactions": [
+      {
+        "id": "txn_wallet_1",
+        "amount": "50000",
+        "type": "CREDIT",
+        "flow": "ONRAMP",
+        "status": "SUCCESS",
+        "createdAt": "2025-12-05T08:00:00.000Z"
+      }
+    ],
+    "pagination": {
+      "currentPage": 1,
+      "totalPages": 3,
+      "totalCount": 28,
+      "limit": 20
+    }
+  }
+}
+```
+
+---
+
+#### 9. Get Transaction by ID
+
+**Endpoint:** `GET /api/transaction/:transactionId`
+
+**Description:** Get detailed information about a specific transaction
+
+**Authentication:** Required
+
+**Rate Limit:** 500 requests per 15 minutes per user
+
+**URL Parameters:**
+
+- `transactionId` (string, required): Transaction ID
+
+**Request:**
+
+```http
+GET /api/transaction/txn_abc123
+```
+
+**Success Response (200):**
+
+```json
+{
+  "success": true,
+  "message": "Transaction details retrieved successfully",
+  "data": {
+    "id": "txn_abc123",
+    "userId": "user_123",
+    "walletId": "wallet_abc123",
+    "amount": "50000",
+    "currency": "INR",
+    "type": "CREDIT",
+    "flow": "ONRAMP",
+    "status": "SUCCESS",
+    "description": "Add money to wallet",
+    "paymentMethodId": "pm_upi_123",
+    "ledgerReferenceId": "ledger_def456",
+    "paymentReferenceId": "pay_ref_xyz789",
+    "metadata": {
+      "accountDetails": {
+        "upiId": "user@upi"
+      }
+    },
+    "createdAt": "2025-12-05T10:00:00.000Z",
+    "updatedAt": "2025-12-05T10:00:05.000Z",
+    "ledgerEntry": {
+      "id": "ledger_def456",
+      "amount": "50000",
+      "balance": "1050000"
+    },
+    "paymentDetails": {
+      "id": "pay_ref_xyz789",
+      "method": "UPI",
+      "status": "SUCCESS"
+    }
+  }
+}
+```
+
+**Error Response (404):**
+
+```json
+{
+  "success": false,
+  "message": "Transaction not found",
+  "error": {
+    "code": "NOT_FOUND",
+    "type": "NOT_FOUND_ERROR",
+    "details": "No transaction found for transactionId: txn_invalid"
+  },
+  "metadata": {
+    "transactionId": "txn_invalid"
+  }
+}
+```
+
+---
+
+#### 10. Cancel Transaction
+
+**Endpoint:** `PATCH /api/transaction/:transactionId/cancel`
+
+**Description:** Cancel a pending transaction
+
+**Authentication:** Required
+
+**Rate Limit:** 50 requests per 15 minutes per user
+
+**URL Parameters:**
+
+- `transactionId` (string, required): Transaction ID to cancel
+
+**Request Body:**
+
+```json
+{
+  "reason": "User requested cancellation"
+}
+```
+
+**Request Body Parameters:**
+
+- `reason` (string, optional): Cancellation reason (max 500 characters)
+
+**Request:**
+
+```http
+PATCH /api/transaction/txn_pending_123/cancel
+Content-Type: application/json
+
+{
+  "reason": "Changed my mind"
+}
+```
+
+**Success Response (200):**
+
+```json
+{
+  "success": true,
+  "message": "Transaction cancelled successfully",
+  "data": {
+    "transactionId": "txn_pending_123",
+    "status": "CANCELLED",
+    "amount": "25000"
+  }
+}
+```
+
+**Error Response (404):**
+
+```json
+{
+  "success": false,
+  "message": "Transaction not found or cannot be cancelled",
+  "error": {
+    "code": "NOT_FOUND",
+    "type": "NOT_FOUND_ERROR",
+    "details": "No transaction found or cannot be cancelled for transactionId: txn_pending_123"
+  },
+  "metadata": {
+    "transactionId": "txn_pending_123"
+  }
+}
+```
+
+---
+
 ## Error Codes Reference
 
 | Code                     | Type                        | HTTP Status | Description             |
@@ -877,17 +1272,23 @@ The Main Service implements comprehensive rate limiting to prevent abuse.
 
 ### Rate Limit Configurations
 
-| Endpoint Pattern              | Limit | Window | Key          |
-| ----------------------------- | ----- | ------ | ------------ |
-| `/auth/signin`                | 3     | 15 min | IP + Email   |
-| `/auth/signup`                | 3     | 1 hour | IP           |
-| `/auth/request-reset`         | 3     | 1 hour | IP + Email   |
-| `/auth/verify-email`          | 5     | 15 min | IP           |
-| `/user/update-user`           | 10    | 15 min | IP           |
-| `/transaction/p2p`            | 20    | 15 min | IP + User ID |
-| `/transaction/add-money`      | 20    | 30 min | IP + User ID |
-| `/transaction/withdraw-money` | 20    | 30 min | IP + User ID |
-| General (all other routes)    | 50    | 15 min | IP           |
+| Endpoint Pattern                       | Limit | Window | Key          |
+| -------------------------------------- | ----- | ------ | ------------ |
+| `/auth/signin`                         | 3     | 15 min | IP + Email   |
+| `/auth/signup`                         | 3     | 1 hour | IP           |
+| `/auth/request-reset`                  | 3     | 1 hour | IP + Email   |
+| `/auth/verify-email`                   | 5     | 15 min | IP           |
+| `/user/update-user`                    | 10    | 15 min | IP           |
+| `/transaction/p2p`                     | 20    | 15 min | IP + User ID |
+| `/transaction/add-money`               | 20    | 30 min | IP + User ID |
+| `/transaction/withdraw-money`          | 20    | 30 min | IP + User ID |
+| `/transaction/all`                     | 500   | 15 min | IP + User ID |
+| `/transaction/summary`                 | 500   | 15 min | IP + User ID |
+| `/transaction/pending`                 | 500   | 15 min | IP + User ID |
+| `/transaction/get-wallet-transactions` | 500   | 15 min | IP + User ID |
+| `/transaction/:transactionId`          | 500   | 15 min | IP + User ID |
+| `/transaction/:transactionId/cancel`   | 50    | 15 min | IP + User ID |
+| General (all other routes)             | 50    | 15 min | IP           |
 
 ### Rate Limit Response
 
