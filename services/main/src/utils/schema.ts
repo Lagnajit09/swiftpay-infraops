@@ -280,3 +280,74 @@ export const bankTransferSchema = z.object({
     })
     .catchall(z.unknown()),
 });
+
+// ========================== TRANSACTION QUERY SCHEMAS ===========================
+
+// Transaction query parameters schema (for GET /all, /wallet/:walletId)
+export const transactionQuerySchema = z.object({
+  query: z.object({
+    walletId: z.string().optional(),
+    type: z.enum(["CREDIT", "DEBIT"]).optional(),
+    flow: z.enum(["ONRAMP", "OFFRAMP", "P2P"]).optional(),
+    status: z.enum(["PENDING", "SUCCESS", "FAILED", "CANCELLED"]).optional(),
+    startDate: z.string().datetime().optional(),
+    endDate: z.string().datetime().optional(),
+    page: z.string().optional().default("1").transform(Number),
+    limit: z.string().optional().default("20").transform(Number),
+    sortBy: z.string().default("createdAt").optional(),
+    sortOrder: z.enum(["asc", "desc"]).default("desc").optional(),
+  }),
+});
+
+// Transaction summary query schema
+export const transactionSummarySchema = z.object({
+  query: z.object({
+    walletId: z.string().optional(),
+    startDate: z.string().datetime().optional(),
+    endDate: z.string().datetime().optional(),
+  }),
+});
+
+// Pending transactions query schema
+export const pendingTransactionsSchema = z.object({
+  query: z.object({
+    walletId: z.string().optional(),
+    flow: z.enum(["ONRAMP", "OFFRAMP", "P2P"]).optional(),
+  }),
+});
+
+// Transaction by ID params schema
+export const transactionByIdSchema = z.object({
+  params: z.object({
+    transactionId: z.string().min(1, "Transaction ID is required"),
+  }),
+});
+
+// Wallet transactions params schema
+export const walletTransactionsSchema = z.object({
+  params: z.object({
+    walletId: z.string().optional(),
+  }),
+  query: z.object({
+    type: z.enum(["CREDIT", "DEBIT"]).optional(),
+    flow: z.enum(["ONRAMP", "OFFRAMP", "P2P"]).optional(),
+    status: z.enum(["PENDING", "SUCCESS", "FAILED", "CANCELLED"]).optional(),
+    startDate: z.string().datetime().optional(),
+    endDate: z.string().datetime().optional(),
+    page: z.string().optional().default("1").transform(Number),
+    limit: z.string().optional().default("20").transform(Number),
+  }),
+});
+
+// Transaction cancel schema
+export const transactionCancelSchema = z.object({
+  params: z.object({
+    transactionId: z.string().min(1, "Transaction ID is required"),
+  }),
+  body: z.object({
+    reason: z
+      .string()
+      .max(500, "Reason cannot exceed 500 characters")
+      .optional(),
+  }),
+});

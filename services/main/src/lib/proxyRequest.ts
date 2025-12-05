@@ -7,7 +7,7 @@ import {
   logInternalError,
 } from "../utils/errorLogger";
 
-type HttpMethod = "get" | "post" | "put" | "delete";
+type HttpMethod = "get" | "post" | "put" | "delete" | "patch";
 
 // Service URL configuration map
 const SERVICE_URLS: Record<string, string> = {
@@ -75,7 +75,18 @@ export function proxyRequest(
       : getServiceUrl(detectedService, undefined);
 
     try {
-      const url = `${serviceUrl}${path}`;
+      // Replace URL parameters with actual values from req.params
+      let finalPath = path;
+      if (req.params && Object.keys(req.params).length > 0) {
+        Object.keys(req.params).forEach((param) => {
+          finalPath = finalPath.replace(`:${param}`, req.params[param]);
+        });
+      }
+      if (finalPath.includes(":walletId") && req.user?.walletID) {
+        finalPath = finalPath.replace(":walletId", req.user.walletID);
+      }
+
+      const url = `${serviceUrl}${finalPath}`;
 
       // Filter headers - only forward necessary ones
       const headersToForward: any = {
@@ -111,15 +122,18 @@ export function proxyRequest(
         validateStatus: () => true,
       };
 
-      // Add params for GET requests
+      // Add query params for GET requests
       if (method === "get" && Object.keys(req.query).length > 0) {
         axiosConfig.params = req.query;
       }
 
-      // Add body for POST/PUT/DELETE requests
-      if (["post", "put", "delete"].includes(method) && req.body) {
+      // Add body for POST/PUT/PATCH/DELETE requests
+      if (["post", "put", "patch", "delete"].includes(method) && req.body) {
         axiosConfig.data = req.body;
-        axiosConfig.data.walletId = req.user?.walletID;
+        // Only add walletId for transaction-related operations
+        if (req.user?.walletID && detectedService === "transaction") {
+          axiosConfig.data.walletId = req.user.walletID;
+        }
       }
 
       console.log(`Proxying ${method.toUpperCase()} ${url}`);

@@ -178,6 +178,32 @@ export const rateLimitConfig = {
     legacyHeaders: false,
   },
 
+  // Transaction query operations - lenient (for GET endpoints)
+  transactionQuery: {
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 500,
+    handler: createRateLimitHandler(
+      "Too many transaction query requests. Please try again in 15 minutes."
+    ),
+    standardHeaders: true,
+    legacyHeaders: false,
+    keyGenerator: (req: any) =>
+      `${ipKeyGenerator(req.ip)}-${req.user?.userId || "unknown"}`,
+  },
+
+  // Transaction cancel operations - moderate
+  transactionCancel: {
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 50,
+    handler: createRateLimitHandler(
+      "Too many transaction cancel attempts. Please try again in 15 minutes."
+    ),
+    standardHeaders: true,
+    legacyHeaders: false,
+    keyGenerator: (req: any) =>
+      `${ipKeyGenerator(req.ip)}-${req.user?.userId || "unknown"}`,
+  },
+
   // Wallet address generation
   addressGeneration: {
     windowMs: 60 * 60 * 1000, // 1 hour
