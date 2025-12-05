@@ -15,6 +15,7 @@ export async function p2pTransfer(
     description?: string;
     debitReferenceId?: string;
     creditReferenceId?: string;
+    metadata?: any;
   }
 ): Promise<WalletResponse> {
   try {
@@ -41,6 +42,7 @@ export async function p2pTransfer(
           debitReferenceId: options.debitReferenceId,
           creditReferenceId: options.creditReferenceId,
         },
+        metadata: options.metadata,
       },
       {
         headers,
@@ -220,6 +222,64 @@ export async function debitWallet(
     const err: any = new Error("Debit wallet request failed");
     err.statusCode = 500;
     throw err;
+  }
+}
+
+/**
+ * Get wallet details including ledger entry
+ */
+export async function getWalletDetails(
+  walletId: string,
+  ledgerEntryId?: string
+): Promise<WalletResponse> {
+  try {
+    const response = await fetch(
+      `${WALLET_SERVICE_URL}/api/wallet/${walletId}`,
+      {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          "x-service-name": "transaction-service",
+        },
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Wallet service error: ${response.statusText}`);
+    }
+
+    const data: WalletResponse = await response.json();
+
+    // If ledgerEntryId is provided, fetch specific ledger entry
+    if (ledgerEntryId) {
+      const ledgerResponse = await fetch(
+        `${WALLET_SERVICE_URL}/api/wallet/${walletId}/ledger/${ledgerEntryId}`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            "x-service-name": "transaction-service",
+          },
+        }
+      );
+
+      if (ledgerResponse.ok) {
+        const ledgerData = await ledgerResponse.json();
+        // Merge ledger entry into the data property
+        return {
+          ...data,
+          data: {
+            ...data.data,
+            ledgerEntry: ledgerData.data,
+          },
+        };
+      }
+    }
+
+    return data;
+  } catch (error: any) {
+    console.error("Error fetching wallet details:", error);
+    throw error;
   }
 }
 

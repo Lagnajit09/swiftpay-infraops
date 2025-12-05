@@ -148,6 +148,36 @@ export async function offRampPayment(
 }
 
 /**
+ * Get payment details by payment reference ID
+ */
+export async function getPaymentDetails(
+  paymentReferenceId: string
+): Promise<PaymentResponse> {
+  try {
+    const response = await fetch(
+      `${PAYMENT_SERVICE_URL}/api/payment/${paymentReferenceId}`,
+      {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          "x-service-name": "transaction-service",
+        },
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Payment service error: ${response.statusText}`);
+    }
+
+    const data: PaymentResponse = await response.json();
+    return data;
+  } catch (error: any) {
+    console.error("Error fetching payment details:", error);
+    throw error;
+  }
+}
+
+/**
  * Health check for payment service
  */
 export async function checkPaymentServiceHealth(): Promise<boolean> {
