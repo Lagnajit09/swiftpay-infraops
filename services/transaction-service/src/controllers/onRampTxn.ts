@@ -145,7 +145,7 @@ export async function onRampTransaction(req: Request, res: Response) {
           transaction.id,
           idemKey,
           {
-            paymentId: paymentResponse.payment.id,
+            paymentId: paymentResponse.data?.payment?.id,
             transactionId: transaction.id,
             paymentMethodId: paymentMethodId,
             accountDetails: accountDetails,
@@ -161,7 +161,7 @@ export async function onRampTransaction(req: Request, res: Response) {
           req,
           {
             transactionId: transaction.id,
-            paymentId: paymentResponse.payment.id,
+            paymentId: paymentResponse.data?.payment?.id,
           }
         );
 
@@ -185,9 +185,9 @@ export async function onRampTransaction(req: Request, res: Response) {
           "Payment successful but wallet update failed. Transaction will be reconciled.",
           {
             transactionId: transaction.id,
-            ledgerEntryId: walletResponse?.ledgerEntryId,
+            ledgerEntryId: walletResponse?.data?.ledgerEntryId,
             status: "PENDING",
-            paymentReferenceId: paymentResponse.referenceId,
+            paymentReferenceId: paymentResponse.data?.payment?.id || "",
           },
           {
             needsReconciliation: true,
@@ -203,10 +203,10 @@ export async function onRampTransaction(req: Request, res: Response) {
         data: {
           status: "SUCCESS",
           ledgerReferenceId:
-            typeof walletResponse.ledgerEntryId === "string"
-              ? walletResponse.ledgerEntryId || null
+            typeof walletResponse.data?.ledgerEntryId === "string"
+              ? walletResponse.data.ledgerEntryId || null
               : null,
-          paymentReferenceId: paymentResponse.payment.id || "",
+          paymentReferenceId: paymentResponse.data?.payment?.id || "",
           metadata: {
             ...(transaction.metadata as object),
             paymentResponse: JSON.parse(JSON.stringify(paymentResponse)),
@@ -225,10 +225,11 @@ export async function onRampTransaction(req: Request, res: Response) {
           status: updatedTransaction.status,
           amount: transaction.amount.toString(),
           currency: transaction.currency,
-          balance: walletResponse.balance,
-          paymentMethod: paymentResponse.paymentMethod,
-          referenceId: paymentResponse.referenceId,
-          ledgerEntryId: walletResponse.ledgerEntryId,
+          balance: walletResponse.data?.balance,
+          paymentMethod: paymentResponse.data?.paymentMethod,
+          paymentId: paymentResponse.data?.payment?.id || "",
+          ledgerEntryId: walletResponse.data?.ledgerEntryId,
+          timestamp: transaction.createdAt,
         },
         {
           transactionType: "ONRAMP",

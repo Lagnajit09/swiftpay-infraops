@@ -22,7 +22,8 @@ export async function p2pTxn(req: Request, res: Response) {
   try {
     const senderUserId = req.user?.userId || req.headers["x-user-id"];
     const idemKey = req.header(idempotencyHeader) || undefined;
-    const { recipientUserId, amount, description, referenceId } = req.body;
+    const { recipientUserId, amount, description, referenceId, metadata } =
+      req.body;
 
     if (!senderUserId) {
       return authErrorResponse(
@@ -116,6 +117,7 @@ export async function p2pTxn(req: Request, res: Response) {
           description: sanitizedDesc || `P2P transfer to ${recipientUserId}`,
           referenceId: sanitizedDebitRefId,
           idempotencyKey: idemKey,
+          metadata: metadata,
         },
       });
 
@@ -135,6 +137,8 @@ export async function p2pTxn(req: Request, res: Response) {
           amount: BigInt(sanitizedAmount),
           description: sanitizedDesc || `P2P transfer from ${senderUserId}`,
           referenceId: sanitizedCreditRefId,
+          idempotencyKey: idemKey,
+          metadata: metadata,
         },
       });
 

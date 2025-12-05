@@ -5,22 +5,33 @@ export interface WalletProxyOptions {
   serviceSecret?: string;
 }
 
+// Standardized success response from wallet/payment services
 export interface WalletResponse {
-  senderWallet?: string;
-  recipientWallet?: string;
-  currency?: string;
-  balance?: string;
-  status?: string;
-  ledgerEntryId?:
-    | string
-    | {
-        debitLedgerEntryId: string;
-        creditLedgerEntryId: string;
-      };
-  senderBalance?: string;
-  recipientBalance?: string;
-  message?: string;
-  error?: string;
+  success: boolean;
+  message: string;
+  data?: {
+    senderWallet?: string;
+    recipientWallet?: string;
+    currency?: string;
+    balance?: string;
+    status?: string;
+    ledgerEntryId?:
+      | string
+      | {
+          debitLedgerEntryId: string;
+          creditLedgerEntryId: string;
+        };
+    senderBalance?: string;
+    recipientBalance?: string;
+    [key: string]: any; // Allow additional fields
+  };
+  error?: {
+    code: string;
+    type: string;
+    details: string;
+    stack?: string;
+  };
+  metadata?: Record<string, any>;
 }
 
 export interface PaymentProxyOptions {
@@ -42,15 +53,25 @@ export interface PaymentProxyOptions {
   serviceSecret?: string;
 }
 
+// Standardized success response from payment service
 export interface PaymentResponse {
-  transactionId?: string;
-  status?: string;
-  success?: boolean;
-  amount?: string;
-  currency?: string;
-  paymentMethod?: string;
-  referenceId?: string;
-  message?: string;
-  error?: string;
-  payment?: any;
+  success: boolean;
+  message: string;
+  data?: {
+    transactionId?: string;
+    status?: string;
+    amount?: string;
+    currency?: string;
+    paymentMethod?: string;
+    referenceId?: string;
+    payment?: any;
+    [key: string]: any; // Allow additional fields
+  };
+  error?: {
+    code: string;
+    type: string;
+    details: string;
+    stack?: string;
+  };
+  metadata?: Record<string, any>;
 }

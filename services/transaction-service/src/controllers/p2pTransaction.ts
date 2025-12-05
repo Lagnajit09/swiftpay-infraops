@@ -13,7 +13,6 @@ import {
 import {
   logValidationError,
   logExternalServiceError,
-  logInternalError,
 } from "../utils/errorLogger";
 
 // POST /api/txn/p2p - Peer-to-peer transaction
@@ -124,6 +123,16 @@ export async function p2pTransaction(req: Request, res: Response) {
         idempotencyKey: idemKey,
         debitReferenceId: debitTransaction.id,
         creditReferenceId: creditTransaction.id,
+        metadata: {
+          senderUserId: String(userId),
+          recipientUserId: String(recipientUserId),
+          transactionId: {
+            debitTransactionId: debitTransaction.id,
+            creditTransactionId: creditTransaction.id,
+          },
+          timestamp: new Date().toISOString(),
+          flow: "P2P",
+        },
       });
 
       // Update transaction status to SUCCESS
@@ -131,10 +140,10 @@ export async function p2pTransaction(req: Request, res: Response) {
         where: { id: debitTransaction.id },
         data: {
           status: "SUCCESS",
-          walletId: walletResponse.senderWallet,
+          walletId: walletResponse.data?.senderWallet || "",
           ledgerReferenceId:
-            typeof walletResponse.ledgerEntryId !== "string"
-              ? walletResponse.ledgerEntryId?.debitLedgerEntryId || null
+            typeof walletResponse.data?.ledgerEntryId !== "string"
+              ? walletResponse.data?.ledgerEntryId?.debitLedgerEntryId || null
               : null,
           relatedTxnId: creditTransaction.id,
           metadata: {
@@ -148,10 +157,10 @@ export async function p2pTransaction(req: Request, res: Response) {
         where: { id: creditTransaction.id },
         data: {
           status: "SUCCESS",
-          walletId: walletResponse.recipientWallet,
+          walletId: walletResponse.data?.recipientWallet || "",
           ledgerReferenceId:
-            typeof walletResponse.ledgerEntryId !== "string"
-              ? walletResponse.ledgerEntryId?.creditLedgerEntryId || null
+            typeof walletResponse.data?.ledgerEntryId !== "string"
+              ? walletResponse.data?.ledgerEntryId?.creditLedgerEntryId || null
               : null,
           relatedTxnId: debitTransaction.id,
           metadata: {
@@ -174,7 +183,8 @@ export async function p2pTransaction(req: Request, res: Response) {
           status: updatedDebitTransaction.status,
           amount: debitTransaction.amount.toString(),
           currency: debitTransaction.currency,
-          senderBalance: walletResponse.senderBalance,
+          senderBalance: walletResponse.data?.senderBalance,
+          timestamp: debitTransaction.createdAt,
         },
         {
           transactionType: "P2P",
