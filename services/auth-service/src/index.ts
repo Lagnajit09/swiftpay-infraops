@@ -5,6 +5,8 @@ import adminRoutes from "./routes/admin";
 import userRoutes from "./routes/account";
 import serviceRoutes from "./routes/service";
 import cookieParser from "cookie-parser";
+import swaggerUi from "swagger-ui-express";
+import { swaggerSpec } from "./lib/swagger";
 
 dotenv.config();
 
@@ -58,6 +60,9 @@ app.use("/api/auth/admin", adminRoutes);
 
 // main auth routes
 app.use("/api/auth", authRoutes);
+
+// Swagger Documentation
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // Global error handler
 app.use(
