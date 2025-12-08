@@ -1,0 +1,227 @@
+openapi: 3.0.0
+paths:
+  /api/auth/admin/health:
+    get:
+      summary: Admin service health check
+      tags:
+        - Admin
+      responses:
+        "200":
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  service:
+                    type: string
+                    example: admin-auth
+                  status:
+                    type: string
+                    example: healthy
+                  timestamp:
+                    type: string
+                    format: date-time
+
+  /api/auth/admin/security-metrics:
+    get:
+      summary: Get security metrics
+      tags:
+        - Admin
+      parameters:
+        - in: header
+          name: x-service-id
+          required: true
+          schema:
+            type: string
+          description: Service identifier
+          example: main-service
+        - in: header
+          name: x-service-secret
+          required: true
+          schema:
+            type: string
+          description: Service secret key
+        - in: header
+          name: x-user-id
+          required: true
+          schema:
+            type: integer
+          description: Admin user ID
+          example: 1
+      responses:
+        "200":
+          description: Security metrics retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Security metrics retrieved successfully
+                  data:
+                    type: object
+                    properties:
+                      last24Hours:
+                        type: object
+                        properties:
+                          totalLogins:
+                            type: integer
+                            example: 1250
+                          failedLogins:
+                            type: integer
+                            example: 45
+                          accountLockouts:
+                            type: integer
+                            example: 3
+                      last7Days:
+                        type: object
+                        properties:
+                          suspiciousActivities:
+                            type: integer
+                            example: 12
+                      current:
+                        type: object
+                        properties:
+                          lockedAccounts:
+                            type: integer
+                            example: 5
+                          unverifiedAccounts:
+                            type: integer
+                            example: 234
+        "403":
+          description: Forbidden (Admin only)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: Admin access required
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        example: AUTHORIZATION
+                      type:
+                        type: string
+                        example: AUTHORIZATION_ERROR
+                      details:
+                        type: string
+                        example: This endpoint requires administrator privileges
+
+  /api/auth/admin/security-logs:
+    get:
+      summary: Get security logs
+      tags:
+        - Admin
+      parameters:
+        - in: header
+          name: x-service-id
+          required: true
+          schema:
+            type: string
+          description: Service identifier
+          example: main-service
+        - in: header
+          name: x-service-secret
+          required: true
+          schema:
+            type: string
+          description: Service secret key
+        - in: header
+          name: x-user-id
+          required: true
+          schema:
+            type: integer
+          description: Admin user ID
+          example: 1
+      responses:
+        "200":
+          description: Security logs retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Security logs retrieved successfully
+                  data:
+                    type: object
+                    properties:
+                      logs:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: integer
+                            userId:
+                              type: string
+                            email:
+                              type: string
+                            eventType:
+                              type: string
+                              example: LOGIN_ATTEMPT
+                            success:
+                              type: boolean
+                            ipAddress:
+                              type: string
+                            userAgent:
+                              type: string
+                            createdAt:
+                              type: string
+                              format: date-time
+                      pagination:
+                        type: object
+                        properties:
+                          page:
+                            type: integer
+                            example: 1
+                          limit:
+                            type: integer
+                            example: 10
+                          total:
+                            type: integer
+                            example: 150
+                          totalPages:
+                            type: integer
+                            example: 15
+        "403":
+          description: Forbidden (Admin only)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: Admin access required
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        example: AUTHORIZATION
+                      type:
+                        type: string
+                        example: AUTHORIZATION_ERROR
+                      details:
+                        type: string
+                        example: This endpoint requires administrator privileges

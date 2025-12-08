@@ -1,14 +1,13 @@
 import express from "express";
-import { getUserProfile, updateUserDetails } from "../controllers/userAction";
-import { rateLimitConfig } from "../utils/validation";
 import rateLimit from "express-rate-limit";
-import { serviceAuthMiddleware } from "../middleware/serviceAuthMiddleware";
+import { rateLimitConfig } from "../utils/validation";
 import { verifyTokenWithSession } from "../middleware/authMiddleware";
+import { getUserProfile, updateUserDetails } from "../controllers/userAction";
+import { serviceAuthMiddleware } from "../middleware/serviceAuthMiddleware";
+
+const generalLimiter = rateLimit(rateLimitConfig.general);
 
 const router = express.Router();
-
-// Rate limiter for internal service calls
-const generalLimiter = rateLimit(rateLimitConfig.general);
 
 // Health check endpoint for account-actions service
 router.get("/health", (req, res) => {
@@ -25,13 +24,7 @@ router.use(verifyTokenWithSession);
 
 // User Profile Operations
 router.get("/me", getUserProfile);
-router.post("/update-user", updateUserDetails);
 
-// TODO: Account Update Operations
-router.patch("/update-email", () => {});
-router.patch("/update-phone", () => {});
-router.patch("/change-password", () => {});
-router.patch("/deactivate", () => {});
-router.delete("/delete", () => {});
+router.post("/update-user", updateUserDetails);
 
 export default router;

@@ -1,0 +1,1017 @@
+openapi: 3.0.0
+paths:
+  /api/auth/health:
+    get:
+      summary: Health check
+      tags:
+        - Health
+      responses:
+        "200":
+          description: Auth service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  service:
+                    type: string
+                    example: auth
+                  status:
+                    type: string
+                    example: healthy
+                  timestamp:
+                    type: string
+                    format: date-time
+
+  /api/auth/signup:
+    post:
+      summary: Register a new user
+      tags:
+        - Auth
+      parameters:
+        - in: header
+          name: x-service-id
+          required: true
+          schema:
+            type: string
+          description: Service identifier
+        - in: header
+          name: x-service-secret
+          required: true
+          schema:
+            type: string
+          description: Service secret key
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - email
+                - password
+                - number
+              properties:
+                name:
+                  type: string
+                  example: John Doe
+                email:
+                  type: string
+                  format: email
+                  example: john@example.com
+                password:
+                  type: string
+                  minLength: 6
+                  example: SecurePass123!
+                number:
+                  type: string
+                  example: "1234567890"
+      responses:
+        "201":
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: User registered. Please check your email to verify your account.
+                  data:
+                    type: object
+                    properties:
+                      userId:
+                        type: integer
+                        example: 123
+                      email:
+                        type: string
+                        example: john@example.com
+                      emailVerified:
+                        type: boolean
+                        example: false
+                  metadata:
+                    type: object
+                    properties:
+                      verificationEmailSent:
+                        type: boolean
+                        example: true
+                      tokenExpiresIn:
+                        type: string
+                        example: 15 minutes
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: Email already registered
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        example: VALIDATION
+                      type:
+                        type: string
+                        example: VALIDATION_ERROR
+                      details:
+                        type: string
+                        example: An account with this email address already exists
+                  metadata:
+                    type: object
+                    properties:
+                      field:
+                        type: string
+                        example: email
+        "500":
+          description: Email service failure
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: Registration failed. Unable to send verification email. Please try again.
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        example: EXTERNAL_SERVICE_ERROR
+                      type:
+                        type: string
+                        example: EXTERNAL_SERVICE_ERROR
+                      details:
+                        type: string
+                  metadata:
+                    type: object
+                    properties:
+                      service:
+                        type: string
+                        example: EmailJS
+
+  /api/auth/signin:
+    post:
+      summary: Sign in a user
+      tags:
+        - Auth
+      parameters:
+        - in: header
+          name: x-service-id
+          required: true
+          schema:
+            type: string
+          description: Service identifier
+        - in: header
+          name: x-service-secret
+          required: true
+          schema:
+            type: string
+          description: Service secret key
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: john@example.com
+                password:
+                  type: string
+                  example: SecurePass123!
+      responses:
+        "200":
+          description: Login successful
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+                example: sessionId=auth:uuid; HttpOnly; Secure; SameSite=Strict; Max-Age=2592000
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Signed in successfully.
+                  data:
+                    type: object
+                    properties:
+                      user:
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                            example: 123
+                          email:
+                            type: string
+                            example: john@example.com
+                          number:
+                            type: string
+                            example: "1234567890"
+                          walletID:
+                            type: string
+                            example: wallet_abc123
+                          role:
+                            type: string
+                            example: USER
+                          emailVerified:
+                            type: boolean
+                            example: true
+                  metadata:
+                    type: object
+                    properties:
+                      sessionCreated:
+                        type: boolean
+                        example: true
+                      expiresIn:
+                        type: string
+                        example: 30 days
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: Invalid credentials
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        example: AUTHENTICATION
+                      type:
+                        type: string
+                        example: AUTHENTICATION_ERROR
+                      details:
+                        type: string
+                        example: Invalid password
+                  metadata:
+                    type: object
+                    properties:
+                      attemptsRemaining:
+                        type: integer
+                        example: 3
+                      failedAttempts:
+                        type: integer
+                        example: 2
+        "423":
+          description: Account locked
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: Account locked. Try again in 25 minutes.
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        example: AUTHENTICATION
+                      type:
+                        type: string
+                        example: AUTHENTICATION_ERROR
+                      details:
+                        type: string
+                        example: Account locked due to multiple failed login attempts
+                  metadata:
+                    type: object
+                    properties:
+                      lockTimeRemaining:
+                        type: integer
+                        example: 25
+                      lockedUntil:
+                        type: string
+                        format: date-time
+        "403":
+          description: Account deactivated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: Account deactivated. Contact support.
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        example: AUTHORIZATION
+                      type:
+                        type: string
+                        example: AUTHORIZATION_ERROR
+                      details:
+                        type: string
+                        example: This account has been deactivated
+
+  /api/auth/verify-email:
+    get:
+      summary: Verify email address
+      tags:
+        - Auth
+      parameters:
+        - in: header
+          name: x-service-id
+          required: true
+          schema:
+            type: string
+          description: Service identifier
+        - in: header
+          name: x-service-secret
+          required: true
+          schema:
+            type: string
+          description: Service secret key
+        - in: query
+          name: token
+          schema:
+            type: string
+          required: true
+          description: Verification token
+      responses:
+        "200":
+          description: Email verified successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Email successfully verified.
+                  data:
+                    type: object
+                    properties:
+                      emailVerified:
+                        type: boolean
+                        example: true
+                  metadata:
+                    type: object
+                    properties:
+                      verifiedAt:
+                        type: string
+                        format: date-time
+        "400":
+          description: Invalid or expired token
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: Invalid or expired token.
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        example: VALIDATION
+                      type:
+                        type: string
+                        example: VALIDATION_ERROR
+                      details:
+                        type: string
+                        example: The verification token is either invalid or has expired. Please request a new verification email.
+
+  /api/auth/request-reset:
+    post:
+      summary: Request password reset
+      tags:
+        - Auth
+      parameters:
+        - in: header
+          name: x-service-id
+          required: true
+          schema:
+            type: string
+          description: Service identifier
+        - in: header
+          name: x-service-secret
+          required: true
+          schema:
+            type: string
+          description: Service secret key
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: john@example.com
+      responses:
+        "200":
+          description: Password reset email sent (or would be sent if account exists)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: If an account with this email exists, a password reset link has been sent.
+                  metadata:
+                    type: object
+                    properties:
+                      emailSent:
+                        type: boolean
+                        example: true
+                      expiresIn:
+                        type: string
+                        example: 15 minutes
+
+  /api/auth/reset-password:
+    post:
+      summary: Reset password
+      tags:
+        - Auth
+      parameters:
+        - in: header
+          name: x-service-id
+          required: true
+          schema:
+            type: string
+          description: Service identifier
+        - in: header
+          name: x-service-secret
+          required: true
+          schema:
+            type: string
+          description: Service secret key
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - token
+                - newPassword
+              properties:
+                token:
+                  type: string
+                  example: reset-token-abc123
+                newPassword:
+                  type: string
+                  minLength: 6
+                  example: NewSecurePass123!
+      responses:
+        "200":
+          description: Password reset successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Password reset successful. Please login with your new password.
+                  data:
+                    type: object
+                    properties:
+                      passwordReset:
+                        type: boolean
+                        example: true
+                  metadata:
+                    type: object
+                    properties:
+                      sessionsInvalidated:
+                        type: boolean
+                        example: true
+        "400":
+          description: Invalid or expired token
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: Invalid or expired reset token
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        example: VALIDATION
+                      type:
+                        type: string
+                        example: VALIDATION_ERROR
+                      details:
+                        type: string
+                        example: The password reset token is either invalid or has expired. Please request a new password reset.
+
+  /api/auth/change-password:
+    post:
+      summary: Change password
+      tags:
+        - Auth
+      parameters:
+        - in: header
+          name: x-service-id
+          required: true
+          schema:
+            type: string
+          description: Service identifier
+        - in: header
+          name: x-service-secret
+          required: true
+          schema:
+            type: string
+          description: Service secret key
+        - in: header
+          name: Cookie
+          required: true
+          schema:
+            type: string
+          description: Session cookie
+          example: sessionId=auth:uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - currentPassword
+                - newPassword
+              properties:
+                currentPassword:
+                  type: string
+                  example: OldPassword123!
+                newPassword:
+                  type: string
+                  minLength: 6
+                  example: NewPassword123!
+      responses:
+        "200":
+          description: Password changed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Password changed successfully. Other sessions have been logged out.
+                  data:
+                    type: object
+                    properties:
+                      passwordChanged:
+                        type: boolean
+                        example: true
+                  metadata:
+                    type: object
+                    properties:
+                      otherSessionsInvalidated:
+                        type: boolean
+                        example: true
+        "401":
+          description: Unauthorized or incorrect password
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: Current password is incorrect
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        example: AUTHENTICATION
+                      type:
+                        type: string
+                        example: AUTHENTICATION_ERROR
+                      details:
+                        type: string
+                        example: The provided current password does not match our records
+
+  /api/auth/request-email-verification:
+    post:
+      summary: Request email verification for current user
+      tags:
+        - Auth
+      parameters:
+        - in: header
+          name: x-service-id
+          required: true
+          schema:
+            type: string
+          description: Service identifier
+        - in: header
+          name: x-service-secret
+          required: true
+          schema:
+            type: string
+          description: Service secret key
+        - in: header
+          name: Cookie
+          required: true
+          schema:
+            type: string
+          description: Session cookie
+          example: sessionId=auth:uuid
+      responses:
+        "200":
+          description: Verification email sent
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Verification email sent successfully. Please check your inbox.
+                  metadata:
+                    type: object
+                    properties:
+                      emailSent:
+                        type: boolean
+                        example: true
+                      expiresIn:
+                        type: string
+                        example: 24 hours
+        "400":
+          description: Email already verified
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: Email is already verified.
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        example: VALIDATION
+                      type:
+                        type: string
+                        example: VALIDATION_ERROR
+                      details:
+                        type: string
+                        example: This email address has already been verified
+        "401":
+          description: Unauthorized
+
+  /api/auth/signout:
+    post:
+      summary: Sign out
+      tags:
+        - Auth
+      parameters:
+        - in: header
+          name: x-service-id
+          required: true
+          schema:
+            type: string
+          description: Service identifier
+        - in: header
+          name: x-service-secret
+          required: true
+          schema:
+            type: string
+          description: Service secret key
+        - in: header
+          name: Cookie
+          required: true
+          schema:
+            type: string
+          description: Session cookie
+          example: sessionId=auth:uuid
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                signoutType:
+                  type: string
+                  enum:
+                    - USER_INITIATED
+                    - SESSION_EXPIRED
+                    - SECURITY_LOGOUT
+                    - ALL_SESSIONS
+                  default: USER_INITIATED
+                  example: USER_INITIATED
+      responses:
+        "200":
+          description: Signed out successfully
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+                example: sessionId=; Max-Age=0
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Signed out successfully.
+                  data:
+                    type: object
+                    properties:
+                      signedOut:
+                        type: boolean
+                        example: true
+                  metadata:
+                    type: object
+                    properties:
+                      signoutType:
+                        type: string
+                        example: USER_INITIATED
+        "401":
+          description: Unauthorized
+
+  /api/auth/security-info:
+    get:
+      summary: Get security information
+      tags:
+        - Auth
+      parameters:
+        - in: header
+          name: x-service-id
+          required: true
+          schema:
+            type: string
+          description: Service identifier
+        - in: header
+          name: x-service-secret
+          required: true
+          schema:
+            type: string
+          description: Service secret key
+        - in: header
+          name: Cookie
+          required: true
+          schema:
+            type: string
+          description: Session cookie
+          example: sessionId=auth:uuid
+      responses:
+        "200":
+          description: Security info retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Security information retrieved successfully
+                  data:
+                    type: object
+                    properties:
+                      user:
+                        type: object
+                        properties:
+                          lastLoginAt:
+                            type: string
+                            format: date-time
+                          passwordChangedAt:
+                            type: string
+                            format: date-time
+                          twoFactorEnabled:
+                            type: boolean
+                            example: false
+                          emailVerified:
+                            type: boolean
+                            example: true
+                          failedLoginAttempts:
+                            type: integer
+                            example: 0
+                          lockedUntil:
+                            type: string
+                            nullable: true
+                      activeSessions:
+                        type: integer
+                        example: 2
+                      recentSecurityEvents:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            eventType:
+                              type: string
+                              example: LOGIN_SUCCESS
+                            success:
+                              type: boolean
+                              example: true
+                            createdAt:
+                              type: string
+                              format: date-time
+                            ipAddress:
+                              type: string
+                              example: 192.168.1.1
+        "401":
+          description: Unauthorized
+
+  /api/auth/sessions:
+    get:
+      summary: Get active sessions
+      tags:
+        - Auth
+      parameters:
+        - in: header
+          name: x-service-id
+          required: true
+          schema:
+            type: string
+          description: Service identifier
+        - in: header
+          name: x-service-secret
+          required: true
+          schema:
+            type: string
+          description: Service secret key
+        - in: header
+          name: Cookie
+          required: true
+          schema:
+            type: string
+          description: Session cookie
+          example: sessionId=auth:uuid
+      responses:
+        "200":
+          description: Active sessions list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Active sessions retrieved successfully
+                  data:
+                    type: object
+                    properties:
+                      sessions:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                              example: session-id-1
+                            createdAt:
+                              type: string
+                              format: date-time
+                            ipAddress:
+                              type: string
+                              example: 192.168.1.1
+                            userAgent:
+                              type: string
+                              example: Mozilla/5.0...
+                            expiresAt:
+                              type: string
+                              format: date-time
+        "401":
+          description: Unauthorized
+
+  /api/auth/sessions/{sessionId}:
+    delete:
+      summary: Revoke a session
+      tags:
+        - Auth
+      parameters:
+        - in: header
+          name: x-service-id
+          required: true
+          schema:
+            type: string
+          description: Service identifier
+        - in: header
+          name: x-service-secret
+          required: true
+          schema:
+            type: string
+          description: Service secret key
+        - in: header
+          name: Cookie
+          required: true
+          schema:
+            type: string
+          description: Session cookie
+          example: sessionId=auth:uuid
+        - in: path
+          name: sessionId
+          schema:
+            type: string
+          required: true
+          description: Session ID to revoke
+          example: session-id-123
+      responses:
+        "200":
+          description: Session revoked successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Session revoked successfully
+                  data:
+                    type: object
+                    properties:
+                      sessionRevoked:
+                        type: boolean
+                        example: true
+        "401":
+          description: Unauthorized
+        "404":
+          description: Session not found

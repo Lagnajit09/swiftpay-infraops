@@ -1,0 +1,172 @@
+openapi: 3.0.0
+paths:
+  /api/auth/service/health:
+    get:
+      summary: Service communication health check
+      tags:
+        - Service
+      responses:
+        "200":
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Session service is running
+                  success:
+                    type: boolean
+                    example: true
+                  timestamp:
+                    type: string
+                    format: date-time
+
+  /api/auth/service/session/verify:
+    post:
+      summary: Verify session
+      tags:
+        - Service
+      parameters:
+        - in: header
+          name: x-service-id
+          required: true
+          schema:
+            type: string
+          description: Service identifier
+          example: payment-service
+        - in: header
+          name: x-service-secret
+          required: true
+          schema:
+            type: string
+          description: Service secret key
+        - in: header
+          name: Cookie
+          required: true
+          schema:
+            type: string
+          description: Session cookie
+          example: sessionId=auth:uuid
+      responses:
+        "200":
+          description: Session verified
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Session verified successfully
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      userId:
+                        type: integer
+                        example: 123
+                      email:
+                        type: string
+                        example: john@example.com
+                      number:
+                        type: string
+                        example: "1234567890"
+                      role:
+                        type: string
+                        example: USER
+                      walletID:
+                        type: string
+                        example: wallet_abc123
+                      isAuthenticated:
+                        type: boolean
+                        example: true
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: No session found, please signin first.
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        example: AUTHENTICATION
+                      type:
+                        type: string
+                        example: AUTHENTICATION_ERROR
+                      details:
+                        type: string
+                        example: Session ID not found in request
+
+  /api/auth/service/session/info:
+    get:
+      summary: Get session info
+      tags:
+        - Service
+      parameters:
+        - in: header
+          name: x-service-id
+          required: true
+          schema:
+            type: string
+          description: Service identifier
+          example: payment-service
+        - in: header
+          name: x-service-secret
+          required: true
+          schema:
+            type: string
+          description: Service secret key
+        - in: header
+          name: Cookie
+          required: true
+          schema:
+            type: string
+          description: Session cookie
+          example: sessionId=auth:uuid
+      responses:
+        "200":
+          description: Session info retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Session info retrieved successfully
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      userId:
+                        type: integer
+                        example: 123
+                      email:
+                        type: string
+                        example: john@example.com
+                      role:
+                        type: string
+                        example: USER
+                      walletID:
+                        type: string
+                        example: wallet_abc123
+                      sessionActive:
+                        type: boolean
+                        example: true
+        "401":
+          description: Unauthorized

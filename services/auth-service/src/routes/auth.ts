@@ -39,7 +39,7 @@ router.get("/health", (req, res) => {
 router.use(generalLimiter);
 router.use(serviceAuthMiddleware);
 
-// Routes with validation and rate limiting
+// Public routes
 router.post("/signup", suspiciousIPDetection, signup);
 
 router.post("/signin", suspiciousIPDetection, checkExistingSession, signin);
@@ -53,21 +53,16 @@ router.post("/reset-password", resetPassword);
 // Protected routes (require authentication)
 router.use(verifyTokenWithSession);
 
-// Change password (requires current password)
 router.post("/change-password", changePassword);
 
-// Request email verification for authenticated users
 router.post("/request-email-verification", requestEmailVerification);
 
 router.post("/signout", signout);
 
-// Get user security information
 router.get("/security-info", getSecurityInfo);
 
-// Get active sessions
 router.get("/sessions", getActiveSessions);
 
-// Revoke specific session
 router.delete("/sessions/:sessionId", revokeSession);
 
 export default router;
