@@ -1,6 +1,8 @@
 import express from "express";
 import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
+import swaggerUi from "swagger-ui-express";
+import { swaggerSpec } from "./lib/swagger";
 import walletRoutes from "./routes/wallet";
 
 dotenv.config();
@@ -20,6 +22,9 @@ const app = express();
 app.use(cookieParser());
 
 app.use(express.json());
+
+// Swagger UI
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 app.use("/api/wallet/", walletRoutes);
 
