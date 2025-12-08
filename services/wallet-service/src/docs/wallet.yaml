@@ -1,0 +1,828 @@
+openapi: 3.0.0
+paths:
+  /api/wallet/health:
+    get:
+      summary: Health check
+      tags:
+        - Health
+      responses:
+        "200":
+          description: Wallet service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  service:
+                    type: string
+                    example: wallet
+                  route:
+                    type: string
+                    example: wallet
+                  status:
+                    type: string
+                    example: healthy
+                  timestamp:
+                    type: string
+                    format: date-time
+
+  /api/wallet/:
+    get:
+      summary: Get or create wallet
+      tags:
+        - Wallet
+      description: Get existing wallet or create a new one for the authenticated user
+      parameters:
+        - in: header
+          name: x-service-id
+          required: true
+          schema:
+            type: string
+          description: Service identifier
+          example: auth-service
+        - in: header
+          name: x-service-secret
+          required: true
+          schema:
+            type: string
+          description: Service secret key
+        - in: header
+          name: x-user-id
+          required: true
+          schema:
+            type: integer
+          description: User ID
+          example: 123
+      responses:
+        "200":
+          description: Wallet retrieved or created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Wallet retrieved successfully
+                  data:
+                    type: object
+                    properties:
+                      walletId:
+                        type: string
+                        example: wallet_abc123
+                      currency:
+                        type: string
+                        example: INR
+                      balance:
+                        type: string
+                        example: "1000000"
+                      status:
+                        type: string
+                        example: ACTIVE
+                  metadata:
+                    type: object
+                    properties:
+                      created:
+                        type: boolean
+                        example: false
+                        description: True if wallet was just created, false if it already existed
+        "401":
+          description: User not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: User not found!
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        example: AUTHENTICATION
+                      type:
+                        type: string
+                        example: AUTHENTICATION_ERROR
+                      details:
+                        type: string
+                        example: User ID not found in request
+                  metadata:
+                    type: object
+                    properties:
+                      userId:
+                        type: string
+                        example: unknown
+        "500":
+          description: Internal error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: Failed to get or create wallet
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        example: INTERNAL
+                      type:
+                        type: string
+                        example: INTERNAL_ERROR
+                      details:
+                        type: string
+                        example: Database error details
+
+  /api/wallet/credit:
+    post:
+      summary: Credit wallet
+      tags:
+        - Wallet
+      description: Add funds to a user's wallet with idempotency support
+      parameters:
+        - in: header
+          name: x-service-id
+          required: true
+          schema:
+            type: string
+          description: Service identifier
+          example: payment-service
+        - in: header
+          name: x-service-secret
+          required: true
+          schema:
+            type: string
+          description: Service secret key
+        - in: header
+          name: x-user-id
+          required: true
+          schema:
+            type: integer
+          description: User ID
+          example: 123
+        - in: header
+          name: idempotency-key
+          required: false
+          schema:
+            type: string
+          description: Unique operation ID for idempotency
+          example: unique-operation-id-123
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - amount
+              properties:
+                amount:
+                  type: string
+                  description: Amount to credit in smallest currency unit (e.g., paise for INR)
+                  example: "50000"
+                description:
+                  type: string
+                  description: Description of the transaction
+                  example: Payment received from order #12345
+                referenceId:
+                  type: string
+                  description: External reference ID for tracking
+                  example: order_12345
+                metaData:
+                  type: object
+                  description: Additional metadata for the transaction
+                  example:
+                    orderId: "12345"
+                    paymentMethod: UPI
+      responses:
+        "201":
+          description: Credit operation successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Credit operation successful
+                  data:
+                    type: object
+                    properties:
+                      walletId:
+                        type: string
+                        example: wallet_abc123
+                      balance:
+                        type: string
+                        example: "1050000"
+                      ledgerEntryId:
+                        type: string
+                        example: ledger_xyz789
+                  metadata:
+                    type: object
+                    properties:
+                      transactionType:
+                        type: string
+                        example: CREDIT
+                      amount:
+                        type: string
+                        example: "50000"
+        "200":
+          description: Idempotent response - duplicate request ignored
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Duplicate ignored (idempotent)
+                  data:
+                    type: object
+                    properties:
+                      idempotent:
+                        type: boolean
+                        example: true
+                  metadata:
+                    type: object
+                    properties:
+                      duplicateRequest:
+                        type: boolean
+                        example: true
+        "400":
+          description: Invalid amount
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: Amount must be positive
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        example: VALIDATION
+                      type:
+                        type: string
+                        example: VALIDATION_ERROR
+                      details:
+                        type: string
+                        example: '[{"field":"amount","message":"Amount must be greater than zero"}]'
+        "404":
+          description: Wallet not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: Wallet not found
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        example: NOT_FOUND
+                      type:
+                        type: string
+                        example: NOT_FOUND_ERROR
+                      details:
+                        type: string
+                        example: No wallet exists for this user
+        "403":
+          description: Wallet not active
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: Wallet is not active
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        example: AUTHORIZATION
+                      type:
+                        type: string
+                        example: AUTHORIZATION_ERROR
+                      details:
+                        type: string
+                        example: This wallet has been deactivated or suspended
+        "409":
+          description: Transaction conflict
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: Transaction conflict. Please try again.
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        example: CONFLICT
+                      type:
+                        type: string
+                        example: CONFLICT_ERROR
+                      details:
+                        type: string
+                        example: A concurrent transaction conflict occurred
+        "503":
+          description: Database connection failed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: Database connection failed. Please try again later.
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        example: DATABASE
+                      type:
+                        type: string
+                        example: DATABASE_ERROR
+                      details:
+                        type: string
+                        example: Database connection error details
+
+  /api/wallet/debit:
+    post:
+      summary: Debit wallet
+      tags:
+        - Wallet
+      description: Deduct funds from a user's wallet with idempotency support
+      parameters:
+        - in: header
+          name: x-service-id
+          required: true
+          schema:
+            type: string
+          description: Service identifier
+          example: payment-service
+        - in: header
+          name: x-service-secret
+          required: true
+          schema:
+            type: string
+          description: Service secret key
+        - in: header
+          name: x-user-id
+          required: true
+          schema:
+            type: integer
+          description: User ID
+          example: 123
+        - in: header
+          name: idempotency-key
+          required: false
+          schema:
+            type: string
+          description: Unique operation ID for idempotency
+          example: unique-operation-id-456
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - amount
+              properties:
+                amount:
+                  type: string
+                  description: Amount to debit in smallest currency unit
+                  example: "25000"
+                description:
+                  type: string
+                  description: Description of the transaction
+                  example: Payment for order #67890
+                referenceId:
+                  type: string
+                  description: External reference ID for tracking
+                  example: order_67890
+                metaData:
+                  type: object
+                  description: Additional metadata for the transaction
+                  example:
+                    orderId: "67890"
+                    merchantId: merchant_123
+      responses:
+        "201":
+          description: Debit operation successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Debit operation successful
+                  data:
+                    type: object
+                    properties:
+                      walletId:
+                        type: string
+                        example: wallet_abc123
+                      balance:
+                        type: string
+                        example: "1025000"
+                      ledgerEntryId:
+                        type: string
+                        example: ledger_def456
+                  metadata:
+                    type: object
+                    properties:
+                      transactionType:
+                        type: string
+                        example: DEBIT
+                      amount:
+                        type: string
+                        example: "25000"
+        "200":
+          description: Idempotent response - duplicate request ignored
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Duplicate ignored (idempotent)
+                  data:
+                    type: object
+                    properties:
+                      idempotent:
+                        type: boolean
+                        example: true
+                  metadata:
+                    type: object
+                    properties:
+                      duplicateRequest:
+                        type: boolean
+                        example: true
+        "400":
+          description: Insufficient funds or invalid amount
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: Insufficient funds
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        example: VALIDATION
+                      type:
+                        type: string
+                        example: VALIDATION_ERROR
+                      details:
+                        type: string
+                        example: '[{"field":"amount","message":"Wallet balance is insufficient for this debit operation"}]'
+        "404":
+          description: Wallet not found
+        "403":
+          description: Wallet not active
+        "409":
+          description: Transaction conflict
+        "503":
+          description: Database connection failed
+
+  /api/wallet/p2p:
+    post:
+      summary: Peer-to-peer transfer
+      tags:
+        - Wallet
+      description: Transfer funds from one user's wallet to another user's wallet atomically with idempotency support
+      parameters:
+        - in: header
+          name: x-service-id
+          required: true
+          schema:
+            type: string
+          description: Service identifier
+          example: main-service
+        - in: header
+          name: x-service-secret
+          required: true
+          schema:
+            type: string
+          description: Service secret key
+        - in: header
+          name: x-user-id
+          required: true
+          schema:
+            type: integer
+          description: Sender user ID
+          example: 123
+        - in: header
+          name: idempotency-key
+          required: false
+          schema:
+            type: string
+          description: Unique operation ID for idempotency
+          example: unique-p2p-operation-789
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - recipientUserId
+                - amount
+              properties:
+                recipientUserId:
+                  type: string
+                  description: User ID of the recipient
+                  example: "456"
+                amount:
+                  type: string
+                  description: Amount to transfer in smallest currency unit
+                  example: "10000"
+                description:
+                  type: string
+                  description: Description of the transfer
+                  example: Payment for dinner
+                referenceId:
+                  type: object
+                  description: Reference IDs for both debit and credit entries
+                  properties:
+                    debitReferenceId:
+                      type: string
+                      description: Reference for sender's debit entry
+                      example: p2p_debit_123
+                    creditReferenceId:
+                      type: string
+                      description: Reference for recipient's credit entry
+                      example: p2p_credit_123
+      responses:
+        "201":
+          description: P2P transfer successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: P2P transfer successful
+                  data:
+                    type: object
+                    properties:
+                      senderWallet:
+                        type: string
+                        example: wallet_abc123
+                      recipientWallet:
+                        type: string
+                        example: wallet_def456
+                      senderBalance:
+                        type: string
+                        example: "1015000"
+                      recipientBalance:
+                        type: string
+                        example: "510000"
+                      ledgerEntryId:
+                        type: object
+                        properties:
+                          debitLedgerEntryId:
+                            type: string
+                            example: ledger_ghi789
+                          creditLedgerEntryId:
+                            type: string
+                            example: ledger_jkl012
+                  metadata:
+                    type: object
+                    properties:
+                      transactionType:
+                        type: string
+                        example: P2P_TRANSFER
+                      amount:
+                        type: string
+                        example: "10000"
+        "200":
+          description: Idempotent response - duplicate request ignored
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Duplicate ignored (idempotent)
+                  data:
+                    type: object
+                    properties:
+                      idempotent:
+                        type: boolean
+                        example: true
+                  metadata:
+                    type: object
+                    properties:
+                      duplicateRequest:
+                        type: boolean
+                        example: true
+        "400":
+          description: Invalid recipient, self transfer, or insufficient funds
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: Recipient user ID is required
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        example: VALIDATION
+                      type:
+                        type: string
+                        example: VALIDATION_ERROR
+                      details:
+                        type: string
+                        example: '[{"field":"recipientUserId","message":"Recipient user ID is required"}]'
+              examples:
+                invalidRecipient:
+                  value:
+                    success: false
+                    message: Recipient user ID is required
+                    error:
+                      code: VALIDATION
+                      type: VALIDATION_ERROR
+                      details: '[{"field":"recipientUserId","message":"Recipient user ID is required"}]'
+                selfTransfer:
+                  value:
+                    success: false
+                    message: Cannot transfer to yourself
+                    error:
+                      code: VALIDATION
+                      type: VALIDATION_ERROR
+                      details: '[{"field":"recipientUserId","message":"Sender and recipient cannot be the same"}]'
+                insufficientFunds:
+                  value:
+                    success: false
+                    message: Insufficient funds
+                    error:
+                      code: VALIDATION
+                      type: VALIDATION_ERROR
+                      details: '[{"field":"amount","message":"Sender wallet balance is insufficient for this transfer"}]'
+        "404":
+          description: Sender or recipient wallet not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: Sender wallet not found
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        example: NOT_FOUND
+                      type:
+                        type: string
+                        example: NOT_FOUND_ERROR
+                      details:
+                        type: string
+                        example: No wallet exists for the sender user
+              examples:
+                senderNotFound:
+                  value:
+                    success: false
+                    message: Sender wallet not found
+                    error:
+                      code: NOT_FOUND
+                      type: NOT_FOUND_ERROR
+                      details: No wallet exists for the sender user
+                recipientNotFound:
+                  value:
+                    success: false
+                    message: Recipient wallet not found
+                    error:
+                      code: NOT_FOUND
+                      type: NOT_FOUND_ERROR
+                      details: No wallet exists for the recipient user
+        "403":
+          description: Sender or recipient wallet not active
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: Sender wallet is not active
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        example: AUTHORIZATION
+                      type:
+                        type: string
+                        example: AUTHORIZATION_ERROR
+                      details:
+                        type: string
+                        example: The sender's wallet has been deactivated or suspended
+              examples:
+                senderNotActive:
+                  value:
+                    success: false
+                    message: Sender wallet is not active
+                    error:
+                      code: AUTHORIZATION
+                      type: AUTHORIZATION_ERROR
+                      details: The sender's wallet has been deactivated or suspended
+                recipientNotActive:
+                  value:
+                    success: false
+                    message: Recipient wallet is not active
+                    error:
+                      code: AUTHORIZATION
+                      type: AUTHORIZATION_ERROR
+                      details: The recipient's wallet has been deactivated or suspended
+        "409":
+          description: Transaction conflict
+        "503":
+          description: Database connection failed
