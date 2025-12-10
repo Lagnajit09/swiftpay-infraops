@@ -1,0 +1,93 @@
+openapi: 3.0.0
+paths:
+  /api/user/me:
+    get:
+      summary: Get user profile
+      tags:
+        - User
+      description: Get current user's profile
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: User profile retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: User profile retrieved
+                  data:
+                    type: object
+                    properties:
+                      userId:
+                        type: string
+                        example: user_abc123
+                      email:
+                        type: string
+                        example: user@example.com
+                      number:
+                        type: string
+                        example: "+919876543210"
+                      emailVerified:
+                        type: boolean
+                        example: true
+                      role:
+                        type: string
+                        example: USER
+                      walletID:
+                        type: string
+                        example: wallet_def456
+                      createdAt:
+                        type: string
+                        format: date-time
+        "401":
+          description: Unauthorized
+
+  /api/user/update-user:
+    post:
+      summary: Update user profile
+      tags:
+        - User
+      description: Update user profile information
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                number:
+                  type: string
+                  example: "+919876543211"
+      responses:
+        "200":
+          description: User profile updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: User profile updated
+                  data:
+                    type: object
+                    properties:
+                      userId:
+                        type: string
+                      number:
+                        type: string
+                      updated:
+                        type: boolean
+                        example: true

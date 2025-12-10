@@ -1,0 +1,54 @@
+openapi: 3.0.0
+paths:
+  /api/wallet/health:
+    get:
+      summary: Wallet service health check
+      tags:
+        - Wallet
+      responses:
+        "200":
+          description: Wallet service is healthy
+
+  /api/wallet/:
+    get:
+      summary: Get or create wallet
+      tags:
+        - Wallet
+      description: Get user's wallet or create if doesn't exist
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Wallet retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Wallet retrieved successfully
+                  data:
+                    type: object
+                    properties:
+                      walletId:
+                        type: string
+                        example: wallet_abc123
+                      currency:
+                        type: string
+                        example: INR
+                      balance:
+                        type: string
+                        example: "1000000"
+                      status:
+                        type: string
+                        example: ACTIVE
+                  metadata:
+                    type: object
+                    properties:
+                      created:
+                        type: boolean
+                        example: false

@@ -1,0 +1,674 @@
+openapi: 3.0.0
+info:
+  title: Main Service (BFF) API
+  version: 1.0.0
+  description: Backend-For-Frontend gateway that proxies requests to microservices
+
+paths:
+  /:
+    get:
+      summary: Service health
+      tags:
+        - Health
+      responses:
+        "200":
+          description: Main service is running
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: SwiftPay Main Service is running
+                  data:
+                    type: object
+                    properties:
+                      service:
+                        type: string
+                        example: main-service
+                      version:
+                        type: string
+                        example: "1.0.0"
+                      status:
+                        type: string
+                        example: healthy
+
+  /api/auth/health:
+    get:
+      summary: Auth service health check
+      tags:
+        - Auth
+      responses:
+        "200":
+          description: Auth service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  service:
+                    type: string
+                    example: auth
+                  route:
+                    type: string
+                    example: auth
+                  status:
+                    type: string
+                    example: healthy
+                  timestamp:
+                    type: string
+                    format: date-time
+
+  /api/auth/signup:
+    post:
+      summary: Sign up
+      tags:
+        - Auth
+      description: Create a new user account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+                - number
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: user@example.com
+                password:
+                  type: string
+                  format: password
+                  example: SecurePass123!
+                number:
+                  type: string
+                  example: "+919876543210"
+      responses:
+        "201":
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: User created successfully. Please verify your email.
+                  data:
+                    type: object
+                    properties:
+                      userId:
+                        type: string
+                        example: user_abc123
+                      email:
+                        type: string
+                        example: user@example.com
+                      emailVerified:
+                        type: boolean
+                        example: false
+        "400":
+          description: Validation error
+        "429":
+          description: Rate limit exceeded (3 requests per hour)
+
+  /api/auth/signin:
+    post:
+      summary: Sign in
+      tags:
+        - Auth
+      description: Authenticate user and create session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  example: user@example.com
+                password:
+                  type: string
+                  example: SecurePass123!
+      responses:
+        "200":
+          description: Signin successful
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+                example: session=<session-token>; HttpOnly; Secure; SameSite=Strict
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Signin successful
+                  data:
+                    type: object
+                    properties:
+                      user:
+                        type: object
+                        properties:
+                          userId:
+                            type: string
+                          email:
+                            type: string
+                          emailVerified:
+                            type: boolean
+                          role:
+                            type: string
+                      session:
+                        type: object
+                        properties:
+                          sessionId:
+                            type: string
+                          expiresAt:
+                            type: string
+                            format: date-time
+        "401":
+          description: Invalid credentials
+        "429":
+          description: Rate limit exceeded
+
+  /api/auth/signout:
+    post:
+      summary: Sign out
+      tags:
+        - Auth
+      description: End user session
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Signout successful
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+                example: session=; Max-Age=0
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Signout successful
+                  data:
+                    type: object
+                    properties:
+                      signedOut:
+                        type: boolean
+                        example: true
+
+  /api/user/me:
+    get:
+      summary: Get user profile
+      tags:
+        - User
+      description: Get current user's profile
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: User profile retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: User profile retrieved
+                  data:
+                    type: object
+                    properties:
+                      userId:
+                        type: string
+                        example: user_abc123
+                      email:
+                        type: string
+                        example: user@example.com
+                      number:
+                        type: string
+                        example: "+919876543210"
+                      emailVerified:
+                        type: boolean
+                        example: true
+                      role:
+                        type: string
+                        example: USER
+                      walletID:
+                        type: string
+                        example: wallet_def456
+                      createdAt:
+                        type: string
+                        format: date-time
+        "401":
+          description: Unauthorized
+
+  /api/user/update-user:
+    post:
+      summary: Update user profile
+      tags:
+        - User
+      description: Update user profile information
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                number:
+                  type: string
+                  example: "+919876543211"
+      responses:
+        "200":
+          description: User profile updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: User profile updated
+                  data:
+                    type: object
+                    properties:
+                      userId:
+                        type: string
+                      number:
+                        type: string
+                      updated:
+                        type: boolean
+                        example: true
+
+  /api/wallet/health:
+    get:
+      summary: Wallet service health check
+      tags:
+        - Wallet
+      responses:
+        "200":
+          description: Wallet service is healthy
+
+  /api/wallet/:
+    get:
+      summary: Get or create wallet
+      tags:
+        - Wallet
+      description: Get user's wallet or create if doesn't exist
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Wallet retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Wallet retrieved successfully
+                  data:
+                    type: object
+                    properties:
+                      walletId:
+                        type: string
+                        example: wallet_abc123
+                      currency:
+                        type: string
+                        example: INR
+                      balance:
+                        type: string
+                        example: "1000000"
+                      status:
+                        type: string
+                        example: ACTIVE
+                  metadata:
+                    type: object
+                    properties:
+                      created:
+                        type: boolean
+                        example: false
+
+  /api/transaction/health:
+    get:
+      summary: Transaction service health check
+      tags:
+        - Transaction
+      responses:
+        "200":
+          description: Transaction service is healthy
+
+  /api/transaction/p2p:
+    post:
+      summary: Peer-to-peer transfer
+      tags:
+        - Transaction
+      description: Transfer money to another user
+      security:
+        - cookieAuth: []
+      parameters:
+        - in: header
+          name: idempotency-key
+          required: false
+          schema:
+            type: string
+          description: Unique operation ID for idempotency
+          example: p2p-unique-id-123
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - recipientUserId
+                - amount
+              properties:
+                recipientUserId:
+                  type: string
+                  description: Recipient's user ID
+                  example: user_def456
+                amount:
+                  type: string
+                  description: Amount in paise
+                  example: "10000"
+                description:
+                  type: string
+                  example: Payment for dinner
+      responses:
+        "201":
+          description: P2P transfer successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: P2P transfer successful
+                  data:
+                    type: object
+                    properties:
+                      transactionId:
+                        type: object
+                        properties:
+                          debit_transaction:
+                            type: string
+                          credit_transaction:
+                            type: string
+                      status:
+                        type: string
+                        example: SUCCESS
+                      amount:
+                        type: string
+                        example: "10000"
+                      currency:
+                        type: string
+                        example: INR
+                      senderBalance:
+                        type: string
+                        example: "990000"
+                  metadata:
+                    type: object
+                    properties:
+                      transactionType:
+                        type: string
+                        example: P2P
+                      flow:
+                        type: string
+                        example: TRANSFER
+        "400":
+          description: Validation error
+        "401":
+          description: Unauthorized
+        "429":
+          description: Rate limit exceeded (20 requests per 15 minutes)
+
+  /api/transaction/add-money:
+    post:
+      summary: Add money (On-ramp)
+      tags:
+        - Transaction
+      description: Add money to wallet from bank account
+      security:
+        - cookieAuth: []
+      parameters:
+        - in: header
+          name: idempotency-key
+          required: false
+          schema:
+            type: string
+          example: onramp-unique-id-456
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - amount
+                - accountDetails
+              properties:
+                amount:
+                  type: string
+                  example: "50000"
+                description:
+                  type: string
+                  example: Add money to wallet
+                currency:
+                  type: string
+                  example: INR
+                accountDetails:
+                  type: object
+                  oneOf:
+                    - properties:
+                        upiId:
+                          type: string
+                          example: user@okaxis
+                    - properties:
+                        accountNumber:
+                          type: string
+                        ifsc:
+                          type: string
+      responses:
+        "201":
+          description: On-ramp transaction successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: On-ramp transaction successful
+                  data:
+                    type: object
+                    properties:
+                      transactionId:
+                        type: string
+                      status:
+                        type: string
+                        example: SUCCESS
+                      amount:
+                        type: string
+                      currency:
+                        type: string
+                      balance:
+                        type: string
+                      paymentMethod:
+                        type: string
+                      referenceId:
+                        type: string
+                      ledgerEntryId:
+                        type: string
+        "429":
+          description: Rate limit exceeded (20 requests per 30 minutes)
+
+  /api/transaction/withdraw-money:
+    post:
+      summary: Withdraw money (Off-ramp)
+      tags:
+        - Transaction
+      description: Withdraw money from wallet to bank account
+      security:
+        - cookieAuth: []
+      parameters:
+        - in: header
+          name: idempotency-key
+          required: false
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - amount
+                - accountDetails
+              properties:
+                amount:
+                  type: string
+                  example: "25000"
+                description:
+                  type: string
+                  example: Withdraw to bank
+                currency:
+                  type: string
+                  example: INR
+                accountDetails:
+                  type: object
+                  properties:
+                    accountNumber:
+                      type: string
+                      example: "1234567890"
+                    ifsc:
+                      type: string
+                      example: SBIN0001234
+      responses:
+        "201":
+          description: Off-ramp transaction successful
+        "429":
+          description: Rate limit exceeded (20 requests per 30 minutes)
+
+  /api/transaction/all:
+    get:
+      summary: Get all transactions
+      tags:
+        - Transaction
+      description: Get all transactions with filtering and pagination
+      security:
+        - cookieAuth: []
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 20
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [PENDING, SUCCESS, FAILED, CANCELLED]
+        - in: query
+          name: type
+          schema:
+            type: string
+            enum: [CREDIT, DEBIT]
+        - in: query
+          name: flow
+          schema:
+            type: string
+            enum: [ONRAMP, OFFRAMP, P2P]
+      responses:
+        "200":
+          description: Transactions retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Transactions retrieved successfully
+                  data:
+                    type: object
+                    properties:
+                      transactions:
+                        type: array
+                        items:
+                          type: object
+                      pagination:
+                        type: object
+                        properties:
+                          currentPage:
+                            type: integer
+                          totalPages:
+                            type: integer
+                          totalCount:
+                            type: integer
+                          limit:
+                            type: integer
+
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: session
+      description: Session-based authentication via HTTP-only cookie

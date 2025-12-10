@@ -1,0 +1,861 @@
+openapi: 3.0.0
+paths:
+  /api/transaction/health:
+    get:
+      summary: Transaction service health check
+      tags:
+        - Transaction
+      responses:
+        "200":
+          description: Transaction service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  service:
+                    type: string
+                    example: transaction
+                  route:
+                    type: string
+                    example: transaction
+                  status:
+                    type: string
+                    example: healthy
+                  timestamp:
+                    type: string
+                    format: date-time
+
+  /api/transaction/p2p:
+    post:
+      summary: Peer-to-peer transfer
+      tags:
+        - Transaction
+      description: Transfer money to another user
+      security:
+        - cookieAuth: []
+      parameters:
+        - in: header
+          name: idempotency-key
+          required: false
+          schema:
+            type: string
+          description: Unique operation ID for idempotency
+          example: p2p-unique-id-123
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - recipientUserId
+                - amount
+              properties:
+                recipientUserId:
+                  type: string
+                  description: Recipient's user ID
+                  example: user_def456
+                amount:
+                  type: string
+                  description: Amount in paise
+                  example: "10000"
+                description:
+                  type: string
+                  example: Payment for dinner
+      responses:
+        "201":
+          description: P2P transfer successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: P2P transfer successful
+                  data:
+                    type: object
+                    properties:
+                      transactionId:
+                        type: object
+                        properties:
+                          debit_transaction:
+                            type: string
+                            example: txn_sender_123
+                          credit_transaction:
+                            type: string
+                            example: txn_recipient_456
+                      status:
+                        type: string
+                        example: SUCCESS
+                      amount:
+                        type: string
+                        example: "10000"
+                      currency:
+                        type: string
+                        example: INR
+                      senderBalance:
+                        type: string
+                        example: "990000"
+                  metadata:
+                    type: object
+                    properties:
+                      transactionType:
+                        type: string
+                        example: P2P
+                      flow:
+                        type: string
+                        example: TRANSFER
+        "400":
+          description: Validation error
+        "401":
+          description: Unauthorized
+        "429":
+          description: Rate limit exceeded (20 requests per 15 minutes)
+
+  /api/transaction/add-money:
+    post:
+      summary: Add money (On-ramp)
+      tags:
+        - Transaction
+      description: Add money to wallet from bank account
+      security:
+        - cookieAuth: []
+      parameters:
+        - in: header
+          name: idempotency-key
+          required: false
+          schema:
+            type: string
+          example: onramp-unique-id-456
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - amount
+                - accountDetails
+              properties:
+                amount:
+                  type: string
+                  example: "50000"
+                description:
+                  type: string
+                  example: Add money to wallet
+                currency:
+                  type: string
+                  example: INR
+                accountDetails:
+                  type: object
+                  oneOf:
+                    - properties:
+                        upiId:
+                          type: string
+                          example: user@okaxis
+                    - properties:
+                        accountNumber:
+                          type: string
+                        ifsc:
+                          type: string
+      responses:
+        "201":
+          description: On-ramp transaction successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: On-ramp transaction successful
+                  data:
+                    type: object
+                    properties:
+                      transactionId:
+                        type: string
+                        example: txn_abc123
+                      status:
+                        type: string
+                        example: SUCCESS
+                      amount:
+                        type: string
+                        example: "50000"
+                      currency:
+                        type: string
+                        example: INR
+                      balance:
+                        type: string
+                        example: "1050000"
+                      paymentMethod:
+                        type: string
+                        example: UPI
+                      referenceId:
+                        type: string
+                        example: pay_ref_xyz789
+                      ledgerEntryId:
+                        type: string
+                        example: ledger_def456
+                  metadata:
+                    type: object
+                    properties:
+                      transactionType:
+                        type: string
+                        example: ONRAMP
+                      flow:
+                        type: string
+                        example: CREDIT
+        "429":
+          description: Rate limit exceeded (20 requests per 30 minutes)
+
+  /api/transaction/withdraw-money:
+    post:
+      summary: Withdraw money (Off-ramp)
+      tags:
+        - Transaction
+      description: Withdraw money from wallet to bank account
+      security:
+        - cookieAuth: []
+      parameters:
+        - in: header
+          name: idempotency-key
+          required: false
+          schema:
+            type: string
+          example: offramp-unique-id-789
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - amount
+                - accountDetails
+              properties:
+                amount:
+                  type: string
+                  example: "25000"
+                description:
+                  type: string
+                  example: Withdraw to bank
+                currency:
+                  type: string
+                  example: INR
+                accountDetails:
+                  type: object
+                  properties:
+                    accountNumber:
+                      type: string
+                      example: "1234567890"
+                    ifsc:
+                      type: string
+                      example: SBIN0001234
+      responses:
+        "201":
+          description: Off-ramp transaction successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Off-ramp transaction successful
+                  data:
+                    type: object
+                    properties:
+                      transactionId:
+                        type: string
+                        example: txn_def456
+                      status:
+                        type: string
+                        example: SUCCESS
+                      amount:
+                        type: string
+                        example: "25000"
+                      currency:
+                        type: string
+                        example: INR
+                      balance:
+                        type: string
+                        example: "1025000"
+                      paymentMethod:
+                        type: string
+                        example: BANK_TRANSFER
+                      referenceId:
+                        type: string
+                        example: pay_ref_abc123
+                      ledgerEntryId:
+                        type: string
+                        example: ledger_ghi789
+                  metadata:
+                    type: object
+                    properties:
+                      transactionType:
+                        type: string
+                        example: OFFRAMP
+                      flow:
+                        type: string
+                        example: DEBIT
+        "429":
+          description: Rate limit exceeded (20 requests per 30 minutes)
+
+  /api/transaction/all:
+    get:
+      summary: Get all transactions
+      tags:
+        - Transaction
+      description: Get all transactions with filtering, pagination, and sorting
+      security:
+        - cookieAuth: []
+      parameters:
+        - in: query
+          name: walletId
+          schema:
+            type: string
+          description: Filter by wallet ID
+        - in: query
+          name: type
+          schema:
+            type: string
+            enum: [CREDIT, DEBIT]
+          description: Filter by type
+        - in: query
+          name: flow
+          schema:
+            type: string
+            enum: [ONRAMP, OFFRAMP, P2P]
+          description: Filter by flow
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [PENDING, SUCCESS, FAILED, CANCELLED]
+          description: Filter by status
+        - in: query
+          name: startDate
+          schema:
+            type: string
+            format: date-time
+          description: Filter transactions after this date
+        - in: query
+          name: endDate
+          schema:
+            type: string
+            format: date-time
+          description: Filter transactions before this date
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+          description: Page number
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 20
+          description: Items per page
+        - in: query
+          name: sortBy
+          schema:
+            type: string
+            default: createdAt
+          description: Sort field
+        - in: query
+          name: sortOrder
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+          description: Sort order
+      responses:
+        "200":
+          description: Transactions retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Transactions retrieved successfully
+                  data:
+                    type: object
+                    properties:
+                      transactions:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                            userId:
+                              type: string
+                            walletId:
+                              type: string
+                            amount:
+                              type: string
+                            currency:
+                              type: string
+                            type:
+                              type: string
+                            flow:
+                              type: string
+                            status:
+                              type: string
+                            description:
+                              type: string
+                            createdAt:
+                              type: string
+                              format: date-time
+                      pagination:
+                        type: object
+                        properties:
+                          currentPage:
+                            type: integer
+                          totalPages:
+                            type: integer
+                          totalCount:
+                            type: integer
+                          limit:
+                            type: integer
+        "401":
+          description: Unauthorized
+        "429":
+          description: Rate limit exceeded (500 requests per 15 minutes)
+
+  /api/transaction/summary:
+    get:
+      summary: Get transaction summary
+      tags:
+        - Transaction
+      description: Get aggregated transaction statistics
+      security:
+        - cookieAuth: []
+      parameters:
+        - in: query
+          name: walletId
+          schema:
+            type: string
+          description: Filter by wallet ID
+        - in: query
+          name: startDate
+          schema:
+            type: string
+            format: date-time
+          description: Start date for summary
+        - in: query
+          name: endDate
+          schema:
+            type: string
+            format: date-time
+          description: End date for summary
+      responses:
+        "200":
+          description: Transaction summary retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Transaction summary retrieved successfully
+                  data:
+                    type: object
+                    properties:
+                      summary:
+                        type: object
+                        properties:
+                          totalTransactions:
+                            type: integer
+                            example: 47
+                          credits:
+                            type: object
+                            properties:
+                              count:
+                                type: integer
+                              total:
+                                type: string
+                          debits:
+                            type: object
+                            properties:
+                              count:
+                                type: integer
+                              total:
+                                type: string
+                          onRamp:
+                            type: object
+                            properties:
+                              count:
+                                type: integer
+                              total:
+                                type: string
+                          offRamp:
+                            type: object
+                            properties:
+                              count:
+                                type: integer
+                              total:
+                                type: string
+                          p2p:
+                            type: object
+                            properties:
+                              received:
+                                type: object
+                                properties:
+                                  count:
+                                    type: integer
+                                  total:
+                                    type: string
+                              sent:
+                                type: object
+                                properties:
+                                  count:
+                                    type: integer
+                                  total:
+                                    type: string
+                      recentTransactions:
+                        type: array
+                        items:
+                          type: object
+        "401":
+          description: Unauthorized
+        "429":
+          description: Rate limit exceeded (500 requests per 15 minutes)
+
+  /api/transaction/pending:
+    get:
+      summary: Get pending transactions
+      tags:
+        - Transaction
+      description: Get all pending transactions
+      security:
+        - cookieAuth: []
+      parameters:
+        - in: query
+          name: walletId
+          schema:
+            type: string
+          description: Filter by wallet ID
+        - in: query
+          name: flow
+          schema:
+            type: string
+            enum: [ONRAMP, OFFRAMP, P2P]
+          description: Filter by flow
+      responses:
+        "200":
+          description: Pending transactions retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Pending transactions retrieved successfully
+                  data:
+                    type: object
+                    properties:
+                      count:
+                        type: integer
+                        example: 3
+                      transactions:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                            userId:
+                              type: string
+                            walletId:
+                              type: string
+                            amount:
+                              type: string
+                            currency:
+                              type: string
+                            type:
+                              type: string
+                            flow:
+                              type: string
+                            status:
+                              type: string
+                              example: PENDING
+                            description:
+                              type: string
+                            needsReconciliation:
+                              type: boolean
+                            createdAt:
+                              type: string
+                              format: date-time
+        "401":
+          description: Unauthorized
+        "429":
+          description: Rate limit exceeded (500 requests per 15 minutes)
+
+  /api/transaction/get-wallet-transactions:
+    get:
+      summary: Get wallet transactions
+      tags:
+        - Transaction
+      description: Get all transactions for user's wallet
+      security:
+        - cookieAuth: []
+      parameters:
+        - in: query
+          name: type
+          schema:
+            type: string
+            enum: [CREDIT, DEBIT]
+          description: Filter by type
+        - in: query
+          name: flow
+          schema:
+            type: string
+            enum: [ONRAMP, OFFRAMP, P2P]
+          description: Filter by flow
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [PENDING, SUCCESS, FAILED, CANCELLED]
+          description: Filter by status
+        - in: query
+          name: startDate
+          schema:
+            type: string
+            format: date-time
+          description: Start date filter
+        - in: query
+          name: endDate
+          schema:
+            type: string
+            format: date-time
+          description: End date filter
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+          description: Page number
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 20
+          description: Items per page
+      responses:
+        "200":
+          description: Wallet transactions retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Wallet transactions retrieved successfully
+                  data:
+                    type: object
+                    properties:
+                      walletId:
+                        type: string
+                        example: wallet_abc123
+                      transactions:
+                        type: array
+                        items:
+                          type: object
+                      pagination:
+                        type: object
+                        properties:
+                          currentPage:
+                            type: integer
+                          totalPages:
+                            type: integer
+                          totalCount:
+                            type: integer
+                          limit:
+                            type: integer
+        "401":
+          description: Unauthorized
+        "429":
+          description: Rate limit exceeded (500 requests per 15 minutes)
+
+  /api/transaction/{transactionId}:
+    get:
+      summary: Get transaction by ID
+      tags:
+        - Transaction
+      description: Get detailed information about a specific transaction
+      security:
+        - cookieAuth: []
+      parameters:
+        - in: path
+          name: transactionId
+          required: true
+          schema:
+            type: string
+          description: Transaction ID
+          example: txn_abc123
+      responses:
+        "200":
+          description: Transaction details retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Transaction details retrieved successfully
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      userId:
+                        type: string
+                      walletId:
+                        type: string
+                      amount:
+                        type: string
+                      currency:
+                        type: string
+                      type:
+                        type: string
+                      flow:
+                        type: string
+                      status:
+                        type: string
+                      description:
+                        type: string
+                      paymentMethodId:
+                        type: string
+                      ledgerReferenceId:
+                        type: string
+                      paymentReferenceId:
+                        type: string
+                      metadata:
+                        type: object
+                      createdAt:
+                        type: string
+                        format: date-time
+                      updatedAt:
+                        type: string
+                        format: date-time
+                      ledgerEntry:
+                        type: object
+                        properties:
+                          id:
+                            type: string
+                          amount:
+                            type: string
+                          balance:
+                            type: string
+                      paymentDetails:
+                        type: object
+                        properties:
+                          id:
+                            type: string
+                          method:
+                            type: string
+                          status:
+                            type: string
+        "401":
+          description: Unauthorized
+        "404":
+          description: Transaction not found
+        "429":
+          description: Rate limit exceeded (500 requests per 15 minutes)
+
+  /api/transaction/{transactionId}/cancel:
+    patch:
+      summary: Cancel transaction
+      tags:
+        - Transaction
+      description: Cancel a pending transaction
+      security:
+        - cookieAuth: []
+      parameters:
+        - in: path
+          name: transactionId
+          required: true
+          schema:
+            type: string
+          description: Transaction ID to cancel
+          example: txn_pending_123
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+                  description: Cancellation reason
+                  example: User requested cancellation
+      responses:
+        "200":
+          description: Transaction cancelled successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Transaction cancelled successfully
+                  data:
+                    type: object
+                    properties:
+                      transactionId:
+                        type: string
+                        example: txn_pending_123
+                      status:
+                        type: string
+                        example: CANCELLED
+                      cancelledAt:
+                        type: string
+                        format: date-time
+        "400":
+          description: Cannot cancel transaction (not pending)
+        "401":
+          description: Unauthorized
+        "404":
+          description: Transaction not found
+        "429":
+          description: Rate limit exceeded (50 requests per 15 minutes)
