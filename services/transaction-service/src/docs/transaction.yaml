@@ -1,0 +1,1413 @@
+openapi: 3.0.0
+paths:
+  /api/transaction/health:
+    get:
+      summary: Health check
+      tags:
+        - Health
+      responses:
+        "200":
+          description: Transaction service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  service:
+                    type: string
+                    example: transaction
+                  route:
+                    type: string
+                    example: transaction
+                  status:
+                    type: string
+                    example: healthy
+                  timestamp:
+                    type: string
+                    format: date-time
+
+  /api/transaction/on-ramp:
+    post:
+      summary: On-ramp transaction (deposit)
+      tags:
+        - Transaction
+      description: Add money to wallet from external payment source (bank account, UPI, etc.)
+      parameters:
+        - in: header
+          name: x-service-id
+          required: true
+          schema:
+            type: string
+          description: Service identifier
+          example: main-service
+        - in: header
+          name: x-service-secret
+          required: true
+          schema:
+            type: string
+          description: Service secret key
+        - in: header
+          name: x-user-id
+          required: true
+          schema:
+            type: integer
+          description: User ID
+          example: 123
+        - in: header
+          name: x-idempotency-key
+          required: false
+          schema:
+            type: string
+          description: Unique operation ID for idempotency
+          example: onramp-unique-id-123
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - walletId
+                - amount
+                - accountDetails
+              properties:
+                walletId:
+                  type: string
+                  description: Target wallet ID
+                  example: wallet_abc123
+                amount:
+                  type: string
+                  description: Amount in smallest currency unit (e.g., paise for INR)
+                  example: "50000"
+                description:
+                  type: string
+                  description: Transaction description
+                  example: Add money to wallet
+                currency:
+                  type: string
+                  description: Currency code
+                  example: INR
+                  default: INR
+                paymentMethodId:
+                  type: string
+                  description: Payment method identifier
+                  example: pm_upi_123
+                accountDetails:
+                  type: object
+                  description: Payment source details
+                  oneOf:
+                    - properties:
+                        upiId:
+                          type: string
+                          example: user@upi
+                    - properties:
+                        accountNumber:
+                          type: string
+                          example: "1234567890"
+                        ifsc:
+                          type: string
+                          example: SBIN0001234
+                metadata:
+                  type: object
+                  description: Additional transaction metadata
+                  example:
+                    source: mobile_app
+                    deviceId: device_xyz
+      responses:
+        "201":
+          description: On-ramp transaction successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: On-ramp transaction successful
+                  data:
+                    type: object
+                    properties:
+                      transactionId:
+                        type: string
+                        example: txn_abc123
+                      status:
+                        type: string
+                        example: SUCCESS
+                      amount:
+                        type: string
+                        example: "50000"
+                      currency:
+                        type: string
+                        example: INR
+                      balance:
+                        type: string
+                        example: "1050000"
+                      paymentMethod:
+                        type: string
+                        example: UPI
+                      referenceId:
+                        type: string
+                        example: pay_ref_xyz789
+                      ledgerEntryId:
+                        type: string
+                        example: ledger_def456
+                  metadata:
+                    type: object
+                    properties:
+                      transactionType:
+                        type: string
+                        example: ONRAMP
+                      flow:
+                        type: string
+                        example: CREDIT
+        "202":
+          description: Payment successful but wallet update failed - needs reconciliation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Payment successful but wallet update failed. Transaction will be reconciled.
+                  data:
+                    type: object
+                    properties:
+                      transactionId:
+                        type: string
+                        example: txn_abc123
+                      ledgerEntryId:
+                        type: string
+                        nullable: true
+                        example: null
+                      status:
+                        type: string
+                        example: PENDING
+                      paymentReferenceId:
+                        type: string
+                        example: pay_ref_xyz789
+                  metadata:
+                    type: object
+                    properties:
+                      needsReconciliation:
+                        type: boolean
+                        example: true
+                      paymentStatus:
+                        type: string
+                        example: SUCCESS
+                      walletStatus:
+                        type: string
+                        example: PENDING
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: Unauthorized! UserID is missing.
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        example: AUTHENTICATION
+                      type:
+                        type: string
+                        example: AUTHENTICATION_ERROR
+                      details:
+                        type: string
+                        example: User ID not found in request
+                  metadata:
+                    type: object
+                    properties:
+                      userId:
+                        type: string
+                        example: unknown
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: Amount must be positive
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        example: VALIDATION
+                      type:
+                        type: string
+                        example: VALIDATION_ERROR
+                      details:
+                        type: string
+                        example: '[{"field":"amount","message":"Amount must be greater than zero"}]'
+              examples:
+                invalidAmount:
+                  value:
+                    success: false
+                    message: Amount must be positive
+                    error:
+                      code: VALIDATION
+                      type: VALIDATION_ERROR
+                      details: '[{"field":"amount","message":"Amount must be greater than zero"}]'
+                missingAccountDetails:
+                  value:
+                    success: false
+                    message: Account details are required
+                    error:
+                      code: VALIDATION
+                      type: VALIDATION_ERROR
+                      details: '[{"field":"accountDetails","message":"Account details are required for on-ramp transactions"}]'
+                invalidAccountDetails:
+                  value:
+                    success: false
+                    message: Valid UPI ID or Bank account details are required
+                    error:
+                      code: VALIDATION
+                      type: VALIDATION_ERROR
+                      details: '[{"field":"accountDetails","message":"Provide either UPI ID or Bank account number with IFSC"}]'
+        "500":
+          description: Payment service error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: Payment processing failed
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        example: EXTERNAL_SERVICE_ERROR
+                      type:
+                        type: string
+                        example: EXTERNAL_SERVICE_ERROR
+                      details:
+                        type: string
+                        example: Payment gateway timeout
+                  metadata:
+                    type: object
+                    properties:
+                      transactionId:
+                        type: string
+                        example: txn_abc123
+
+  /api/transaction/off-ramp:
+    post:
+      summary: Off-ramp transaction (withdrawal)
+      tags:
+        - Transaction
+      description: Withdraw money from wallet to external payment destination (bank account, UPI, etc.)
+      parameters:
+        - in: header
+          name: x-service-id
+          required: true
+          schema:
+            type: string
+          example: main-service
+        - in: header
+          name: x-service-secret
+          required: true
+          schema:
+            type: string
+        - in: header
+          name: x-user-id
+          required: true
+          schema:
+            type: integer
+          example: 123
+        - in: header
+          name: x-idempotency-key
+          required: false
+          schema:
+            type: string
+          example: offramp-unique-id-456
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - walletId
+                - amount
+                - accountDetails
+              properties:
+                walletId:
+                  type: string
+                  example: wallet_abc123
+                amount:
+                  type: string
+                  example: "25000"
+                description:
+                  type: string
+                  example: Withdraw to bank account
+                currency:
+                  type: string
+                  example: INR
+                paymentMethodId:
+                  type: string
+                  example: pm_bank_456
+                accountDetails:
+                  type: object
+                  properties:
+                    accountNumber:
+                      type: string
+                      example: "1234567890"
+                    ifsc:
+                      type: string
+                      example: SBIN0001234
+                metadata:
+                  type: object
+                  example:
+                    purpose: personal_expense
+      responses:
+        "201":
+          description: Off-ramp transaction successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Off-ramp transaction successful
+                  data:
+                    type: object
+                    properties:
+                      transactionId:
+                        type: string
+                        example: txn_def456
+                      status:
+                        type: string
+                        example: SUCCESS
+                      amount:
+                        type: string
+                        example: "25000"
+                      currency:
+                        type: string
+                        example: INR
+                      balance:
+                        type: string
+                        example: "1025000"
+                      paymentMethod:
+                        type: string
+                        example: BANK_TRANSFER
+                      referenceId:
+                        type: string
+                        example: pay_ref_abc123
+                      ledgerEntryId:
+                        type: string
+                        example: ledger_ghi789
+                  metadata:
+                    type: object
+                    properties:
+                      transactionType:
+                        type: string
+                        example: OFFRAMP
+                      flow:
+                        type: string
+                        example: DEBIT
+        "202":
+          description: Partial success - needs reconciliation
+        "400":
+          description: Validation error or insufficient funds
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: Insufficient wallet balance
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        example: EXTERNAL_SERVICE_ERROR
+                      type:
+                        type: string
+                        example: EXTERNAL_SERVICE_ERROR
+                      details:
+                        type: string
+                        example: Wallet balance is insufficient for this withdrawal
+                  metadata:
+                    type: object
+                    properties:
+                      transactionId:
+                        type: string
+                        example: txn_def456
+        "401":
+          description: Unauthorized
+        "500":
+          description: Payment service error
+
+  /api/transaction/p2p:
+    post:
+      summary: Peer-to-peer transfer
+      tags:
+        - Transaction
+      description: Transfer money between two users' wallets
+      parameters:
+        - in: header
+          name: x-service-id
+          required: true
+          schema:
+            type: string
+          example: main-service
+        - in: header
+          name: x-service-secret
+          required: true
+          schema:
+            type: string
+        - in: header
+          name: x-user-id
+          required: true
+          schema:
+            type: integer
+          description: Sender user ID
+          example: 123
+        - in: header
+          name: x-idempotency-key
+          required: false
+          schema:
+            type: string
+          example: p2p-unique-id-789
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - recipientUserId
+                - amount
+              properties:
+                recipientUserId:
+                  type: string
+                  description: Recipient's user ID
+                  example: "456"
+                amount:
+                  type: string
+                  description: Amount in smallest currency unit
+                  example: "10000"
+                description:
+                  type: string
+                  description: Transfer description
+                  example: Payment for dinner
+                paymentMethodId:
+                  type: string
+                  example: pm_wallet
+      responses:
+        "201":
+          description: P2P transfer successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: P2P transfer successful
+                  data:
+                    type: object
+                    properties:
+                      transactionId:
+                        type: object
+                        properties:
+                          debit_transaction:
+                            type: string
+                            example: txn_sender_123
+                          credit_transaction:
+                            type: string
+                            example: txn_recipient_456
+                      status:
+                        type: string
+                        example: SUCCESS
+                      amount:
+                        type: string
+                        example: "10000"
+                      currency:
+                        type: string
+                        example: INR
+                      senderBalance:
+                        type: string
+                        example: "1015000"
+                  metadata:
+                    type: object
+                    properties:
+                      transactionType:
+                        type: string
+                        example: P2P
+                      flow:
+                        type: string
+                        example: TRANSFER
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: Recipient user ID is required
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        example: VALIDATION
+                      type:
+                        type: string
+                        example: VALIDATION_ERROR
+                      details:
+                        type: string
+                        example: '[{"field":"recipientUserId","message":"Recipient user ID is required"}]'
+              examples:
+                missingRecipient:
+                  value:
+                    success: false
+                    message: Recipient user ID is required
+                    error:
+                      code: VALIDATION
+                      type: VALIDATION_ERROR
+                      details: '[{"field":"recipientUserId","message":"Recipient user ID is required"}]'
+                selfTransfer:
+                  value:
+                    success: false
+                    message: Cannot transfer to yourself
+                    error:
+                      code: VALIDATION
+                      type: VALIDATION_ERROR
+                      details: '[{"field":"recipientUserId","message":"Sender and recipient cannot be the same"}]'
+        "500":
+          description: Wallet service error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: Insufficient funds in sender wallet
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        example: EXTERNAL_SERVICE_ERROR
+                      type:
+                        type: string
+                        example: EXTERNAL_SERVICE_ERROR
+                      details:
+                        type: string
+                        example: Wallet service error details
+                  metadata:
+                    type: object
+                    properties:
+                      transactionId:
+                        type: string
+                        example: txn_sender_123
+
+  /api/transaction/all:
+    get:
+      summary: Get all transactions
+      tags:
+        - Query
+      description: Retrieve all transactions for a user with filtering, pagination, and sorting
+      parameters:
+        - in: header
+          name: x-service-id
+          required: true
+          schema:
+            type: string
+          example: main-service
+        - in: header
+          name: x-service-secret
+          required: true
+          schema:
+            type: string
+        - in: header
+          name: x-user-id
+          required: true
+          schema:
+            type: integer
+          example: 123
+        - in: query
+          name: walletId
+          schema:
+            type: string
+          description: Filter by wallet ID
+        - in: query
+          name: type
+          schema:
+            type: string
+            enum: [CREDIT, DEBIT]
+          description: Filter by type
+        - in: query
+          name: flow
+          schema:
+            type: string
+            enum: [ONRAMP, OFFRAMP, P2P]
+          description: Filter by flow
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [PENDING, SUCCESS, FAILED, CANCELLED]
+          description: Filter by status
+        - in: query
+          name: startDate
+          schema:
+            type: string
+            format: date-time
+          description: Filter transactions after this date (ISO 8601)
+        - in: query
+          name: endDate
+          schema:
+            type: string
+            format: date-time
+          description: Filter transactions before this date (ISO 8601)
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+          description: Page number
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 20
+          description: Items per page
+        - in: query
+          name: sortBy
+          schema:
+            type: string
+            default: createdAt
+          description: Sort field
+        - in: query
+          name: sortOrder
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+          description: Sort order
+      responses:
+        "200":
+          description: Transactions retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Transactions retrieved successfully
+                  data:
+                    type: object
+                    properties:
+                      transactions:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                              example: txn_abc123
+                            userId:
+                              type: string
+                              example: "123"
+                            walletId:
+                              type: string
+                              example: wallet_abc123
+                            amount:
+                              type: string
+                              example: "50000"
+                            currency:
+                              type: string
+                              example: INR
+                            type:
+                              type: string
+                              example: CREDIT
+                            flow:
+                              type: string
+                              example: ONRAMP
+                            status:
+                              type: string
+                              example: SUCCESS
+                            description:
+                              type: string
+                              example: Add money to wallet
+                            paymentMethodId:
+                              type: string
+                              example: pm_upi_123
+                            ledgerReferenceId:
+                              type: string
+                              example: ledger_def456
+                            paymentReferenceId:
+                              type: string
+                              example: pay_ref_xyz789
+                            createdAt:
+                              type: string
+                              format: date-time
+                            updatedAt:
+                              type: string
+                              format: date-time
+                      pagination:
+                        type: object
+                        properties:
+                          currentPage:
+                            type: integer
+                            example: 1
+                          totalPages:
+                            type: integer
+                            example: 5
+                          totalCount:
+                            type: integer
+                            example: 47
+                          limit:
+                            type: integer
+                            example: 10
+
+  /api/transaction/{transactionId}:
+    get:
+      summary: Get transaction by ID
+      tags:
+        - Query
+      description: Get detailed information about a specific transaction
+      parameters:
+        - in: path
+          name: transactionId
+          required: true
+          schema:
+            type: string
+          description: Transaction ID
+          example: txn_abc123
+        - in: header
+          name: x-service-id
+          required: true
+          schema:
+            type: string
+          example: main-service
+        - in: header
+          name: x-service-secret
+          required: true
+          schema:
+            type: string
+        - in: header
+          name: x-user-id
+          required: true
+          schema:
+            type: integer
+          example: 123
+      responses:
+        "200":
+          description: Transaction details retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Transaction details retrieved successfully
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        example: txn_abc123
+                      userId:
+                        type: string
+                        example: "123"
+                      walletId:
+                        type: string
+                        example: wallet_abc123
+                      amount:
+                        type: string
+                        example: "50000"
+                      currency:
+                        type: string
+                        example: INR
+                      type:
+                        type: string
+                        example: CREDIT
+                      flow:
+                        type: string
+                        example: ONRAMP
+                      status:
+                        type: string
+                        example: SUCCESS
+                      description:
+                        type: string
+                        example: Add money to wallet
+                      paymentMethodId:
+                        type: string
+                        example: pm_upi_123
+                      ledgerReferenceId:
+                        type: string
+                        example: ledger_def456
+                      paymentReferenceId:
+                        type: string
+                        example: pay_ref_xyz789
+                      metadata:
+                        type: object
+                        properties:
+                          accountDetails:
+                            type: object
+                            properties:
+                              upiId:
+                                type: string
+                                example: user@upi
+                      createdAt:
+                        type: string
+                        format: date-time
+                      updatedAt:
+                        type: string
+                        format: date-time
+                      ledgerEntry:
+                        type: object
+                        properties:
+                          id:
+                            type: string
+                            example: ledger_def456
+                          amount:
+                            type: string
+                            example: "50000"
+                          balance:
+                            type: string
+                            example: "1050000"
+                      paymentDetails:
+                        type: object
+                        properties:
+                          id:
+                            type: string
+                            example: pay_ref_xyz789
+                          method:
+                            type: string
+                            example: UPI
+                          status:
+                            type: string
+                            example: SUCCESS
+                      relatedTransaction:
+                        type: object
+                        nullable: true
+                        example: null
+        "404":
+          description: Transaction not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: Transaction not found
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        example: NOT_FOUND
+                      type:
+                        type: string
+                        example: NOT_FOUND_ERROR
+                      details:
+                        type: string
+                        example: "No transaction found for transactionId: txn_invalid"
+                  metadata:
+                    type: object
+                    properties:
+                      transactionId:
+                        type: string
+                        example: txn_invalid
+
+  /api/transaction/wallet/{walletId}:
+    get:
+      summary: Get wallet transactions
+      tags:
+        - Query
+      description: Get all transactions for a specific wallet with filtering and pagination
+      parameters:
+        - in: path
+          name: walletId
+          required: true
+          schema:
+            type: string
+          description: Wallet ID
+          example: wallet_abc123
+        - in: header
+          name: x-service-id
+          required: true
+          schema:
+            type: string
+        - in: header
+          name: x-service-secret
+          required: true
+          schema:
+            type: string
+        - in: header
+          name: x-user-id
+          required: true
+          schema:
+            type: integer
+        - in: query
+          name: type
+          schema:
+            type: string
+            enum: [CREDIT, DEBIT]
+        - in: query
+          name: flow
+          schema:
+            type: string
+            enum: [ONRAMP, OFFRAMP, P2P]
+        - in: query
+          name: status
+          schema:
+            type: string
+        - in: query
+          name: startDate
+          schema:
+            type: string
+            format: date-time
+        - in: query
+          name: endDate
+          schema:
+            type: string
+            format: date-time
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          description: Wallet transactions retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Wallet transactions retrieved successfully
+                  data:
+                    type: object
+                    properties:
+                      walletId:
+                        type: string
+                        example: wallet_abc123
+                      transactions:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                            amount:
+                              type: string
+                            type:
+                              type: string
+                            flow:
+                              type: string
+                            status:
+                              type: string
+                            createdAt:
+                              type: string
+                              format: date-time
+                      pagination:
+                        type: object
+                        properties:
+                          currentPage:
+                            type: integer
+                          totalPages:
+                            type: integer
+                          totalCount:
+                            type: integer
+                          limit:
+                            type: integer
+
+  /api/transaction/summary:
+    get:
+      summary: Get transaction summary
+      tags:
+        - Query
+      description: Get aggregated transaction statistics for a user
+      parameters:
+        - in: header
+          name: x-service-id
+          required: true
+          schema:
+            type: string
+        - in: header
+          name: x-service-secret
+          required: true
+          schema:
+            type: string
+        - in: header
+          name: x-user-id
+          required: true
+          schema:
+            type: integer
+        - in: query
+          name: walletId
+          schema:
+            type: string
+        - in: query
+          name: startDate
+          schema:
+            type: string
+            format: date-time
+        - in: query
+          name: endDate
+          schema:
+            type: string
+            format: date-time
+      responses:
+        "200":
+          description: Transaction summary retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Transaction summary retrieved successfully
+                  data:
+                    type: object
+                    properties:
+                      summary:
+                        type: object
+                        properties:
+                          totalTransactions:
+                            type: integer
+                            example: 47
+                          credits:
+                            type: object
+                            properties:
+                              count:
+                                type: integer
+                                example: 25
+                              total:
+                                type: string
+                                example: "1250000"
+                          debits:
+                            type: object
+                            properties:
+                              count:
+                                type: integer
+                                example: 22
+                              total:
+                                type: string
+                                example: "1100000"
+                          onRamp:
+                            type: object
+                            properties:
+                              count:
+                                type: integer
+                                example: 15
+                              total:
+                                type: string
+                                example: "750000"
+                          offRamp:
+                            type: object
+                            properties:
+                              count:
+                                type: integer
+                                example: 12
+                              total:
+                                type: string
+                                example: "600000"
+                          p2p:
+                            type: object
+                            properties:
+                              received:
+                                type: object
+                                properties:
+                                  count:
+                                    type: integer
+                                    example: 10
+                                  total:
+                                    type: string
+                                    example: "500000"
+                              sent:
+                                type: object
+                                properties:
+                                  count:
+                                    type: integer
+                                    example: 10
+                                  total:
+                                    type: string
+                                    example: "500000"
+                      recentTransactions:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                            amount:
+                              type: string
+                            type:
+                              type: string
+                            flow:
+                              type: string
+                            status:
+                              type: string
+                            createdAt:
+                              type: string
+                              format: date-time
+
+  /api/transaction/pending:
+    get:
+      summary: Get pending transactions
+      tags:
+        - Query
+      description: Get all pending transactions for a user
+      parameters:
+        - in: header
+          name: x-service-id
+          required: true
+          schema:
+            type: string
+        - in: header
+          name: x-service-secret
+          required: true
+          schema:
+            type: string
+        - in: header
+          name: x-user-id
+          required: true
+          schema:
+            type: integer
+        - in: query
+          name: walletId
+          schema:
+            type: string
+        - in: query
+          name: flow
+          schema:
+            type: string
+            enum: [ONRAMP, OFFRAMP, P2P]
+      responses:
+        "200":
+          description: Pending transactions retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Pending transactions retrieved successfully
+                  data:
+                    type: object
+                    properties:
+                      count:
+                        type: integer
+                        example: 3
+                      transactions:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                              example: txn_pending_1
+                            userId:
+                              type: string
+                              example: "123"
+                            walletId:
+                              type: string
+                              example: wallet_abc123
+                            amount:
+                              type: string
+                              example: "25000"
+                            currency:
+                              type: string
+                              example: INR
+                            type:
+                              type: string
+                              example: CREDIT
+                            flow:
+                              type: string
+                              example: ONRAMP
+                            status:
+                              type: string
+                              example: PENDING
+                            description:
+                              type: string
+                              example: Add money
+                            needsReconciliation:
+                              type: boolean
+                              example: false
+                            createdAt:
+                              type: string
+                              format: date-time
+
+  /api/transaction/{transactionId}/cancel:
+    patch:
+      summary: Cancel transaction
+      tags:
+        - Transaction
+      description: Cancel a pending transaction
+      parameters:
+        - in: path
+          name: transactionId
+          required: true
+          schema:
+            type: string
+          description: Transaction ID to cancel
+          example: txn_pending_123
+        - in: header
+          name: x-service-id
+          required: true
+          schema:
+            type: string
+          example: main-service
+        - in: header
+          name: x-service-secret
+          required: true
+          schema:
+            type: string
+        - in: header
+          name: x-user-id
+          required: true
+          schema:
+            type: integer
+          example: 123
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+                  description: Cancellation reason (max 500 characters)
+                  example: User requested cancellation
+      responses:
+        "200":
+          description: Transaction cancelled successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Transaction cancelled successfully
+                  data:
+                    type: object
+                    properties:
+                      transactionId:
+                        type: string
+                        example: txn_pending_123
+                      status:
+                        type: string
+                        example: CANCELLED
+                      amount:
+                        type: string
+                        example: "25000"
+        "404":
+          description: Transaction not found or cannot be cancelled
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: Transaction not found or cannot be cancelled
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        example: NOT_FOUND
+                      type:
+                        type: string
+                        example: NOT_FOUND_ERROR
+                      details:
+                        type: string
+                        example: "No transaction found or cannot be cancelled for transactionId: txn_pending_123"
+                  metadata:
+                    type: object
+                    properties:
+                      transactionId:
+                        type: string
+                        example: txn_pending_123
