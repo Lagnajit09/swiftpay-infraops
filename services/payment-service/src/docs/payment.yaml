@@ -1,0 +1,522 @@
+openapi: 3.0.0
+paths:
+  /api/payment/health:
+    get:
+      summary: Health check
+      tags:
+        - Health
+      responses:
+        "200":
+          description: Payment service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  service:
+                    type: string
+                    example: payment
+                  route:
+                    type: string
+                    example: payment
+                  status:
+                    type: string
+                    example: healthy
+                  timestamp:
+                    type: string
+                    format: date-time
+
+  /api/payment/on-ramp:
+    post:
+      summary: On-ramp payment (deposit)
+      tags:
+        - Payment
+      description: Process incoming payment from user's bank account or UPI to collect funds
+      parameters:
+        - in: header
+          name: x-service-id
+          required: true
+          schema:
+            type: string
+          description: Service identifier
+          example: transaction-service
+        - in: header
+          name: x-service-secret
+          required: true
+          schema:
+            type: string
+          description: Service secret key
+        - in: header
+          name: x-user-id
+          required: true
+          schema:
+            type: integer
+          description: User ID
+          example: 123
+        - in: header
+          name: idempotency-key
+          required: false
+          schema:
+            type: string
+          description: Unique operation ID for idempotency
+          example: onramp-payment-unique-id-123
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - walletId
+                - amount
+                - accountDetails
+              properties:
+                walletId:
+                  type: string
+                  description: Target wallet ID
+                  example: wallet_abc123
+                transactionId:
+                  type: string
+                  description: Associated transaction ID from transaction-service
+                  example: txn_xyz789
+                paymentMethodId:
+                  type: string
+                  description: Payment method identifier
+                  example: pm_upi_001
+                amount:
+                  type: string
+                  description: Amount in smallest currency unit (e.g., paise for INR)
+                  example: "50000"
+                currency:
+                  type: string
+                  description: Currency code
+                  example: INR
+                  default: INR
+                accountDetails:
+                  type: object
+                  description: Payment source details
+                  oneOf:
+                    - properties:
+                        upiId:
+                          type: string
+                          example: user@okaxis
+                    - properties:
+                        accountNumber:
+                          type: string
+                          example: "1234567890"
+                        ifsc:
+                          type: string
+                          example: SBIN0001234
+                        bankName:
+                          type: string
+                          example: State Bank of India
+                metadata:
+                  type: object
+                  description: Additional payment metadata
+                  example:
+                    source: mobile_app
+                    deviceId: device_123
+      responses:
+        "200":
+          description: On-ramp payment processed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: On-ramp payment processed successfully
+                  data:
+                    type: object
+                    properties:
+                      payment:
+                        type: object
+                        properties:
+                          id:
+                            type: string
+                            example: pay_abc123
+                          status:
+                            type: string
+                            example: SUCCESS
+                          amount:
+                            type: integer
+                            example: 50000
+                          currency:
+                            type: string
+                            example: INR
+                          transactionId:
+                            type: string
+                            example: txn_xyz789
+                          gatewayReference:
+                            type: string
+                            example: gateway_ref_456
+                      paymentMethod:
+                        type: string
+                        example: UPI
+                      referenceId:
+                        type: string
+                        example: gateway_ref_456
+                  metadata:
+                    type: object
+                    properties:
+                      paymentType:
+                        type: string
+                        example: ONRAMP
+                      attemptNumber:
+                        type: integer
+                        example: 1
+              examples:
+                success:
+                  value:
+                    success: true
+                    message: On-ramp payment processed successfully
+                    data:
+                      payment:
+                        id: pay_abc123
+                        status: SUCCESS
+                        amount: 50000
+                        currency: INR
+                        transactionId: txn_xyz789
+                        gatewayReference: gateway_ref_456
+                      paymentMethod: UPI
+                      referenceId: gateway_ref_456
+                    metadata:
+                      paymentType: ONRAMP
+                      attemptNumber: 1
+                idempotent:
+                  value:
+                    success: true
+                    message: Request already processed (idempotent)
+                    data:
+                      payment:
+                        id: pay_abc123
+                        status: SUCCESS
+                        amount: 50000
+                        currency: INR
+                        userId: "123"
+                        walletId: wallet_abc123
+                        transactionId: txn_xyz789
+                        gatewayReference: gateway_ref_456
+                        createdAt: "2025-12-04T22:27:15.123Z"
+                    metadata:
+                      idempotent: true
+                      originalStatus: SUCCESS
+        "400":
+          description: Validation error or payment gateway failure
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: Invalid request parameters
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        example: VALIDATION
+                      type:
+                        type: string
+                        example: VALIDATION_ERROR
+                      details:
+                        type: string
+                        example: '[{"field":"userId","message":"User ID is required"},{"field":"walletId","message":"Wallet ID is required"},{"field":"amount","message":"Valid positive amount is required"}]'
+                  metadata:
+                    type: object
+                    nullable: true
+              examples:
+                invalidParameters:
+                  value:
+                    success: false
+                    message: Invalid request parameters
+                    error:
+                      code: VALIDATION
+                      type: VALIDATION_ERROR
+                      details: '[{"field":"userId","message":"User ID is required"},{"field":"walletId","message":"Wallet ID is required"},{"field":"amount","message":"Valid positive amount is required"}]'
+                invalidAccountDetails:
+                  value:
+                    success: false
+                    message: Invalid account details
+                    error:
+                      code: VALIDATION
+                      type: VALIDATION_ERROR
+                      details: '[{"field":"accountDetails","message":"Account number or UPI ID is required"}]'
+                insufficientFunds:
+                  value:
+                    success: false
+                    message: Insufficient funds in source account
+                    error:
+                      code: EXTERNAL_SERVICE_ERROR
+                      type: EXTERNAL_SERVICE_ERROR
+                      details: INSUFFICIENT_FUNDS
+                    metadata:
+                      payment:
+                        id: pay_abc123
+                        status: FAILED
+                        amount: 50000
+                      errorCode: INSUFFICIENT_FUNDS
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: Internal server error during payment processing
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        example: INTERNAL
+                      type:
+                        type: string
+                        example: INTERNAL_ERROR
+                      details:
+                        type: string
+                        example: Database connection timeout
+
+  /api/payment/off-ramp:
+    post:
+      summary: Off-ramp payment (withdrawal)
+      tags:
+        - Payment
+      description: Process outgoing payment to user's bank account or UPI to disburse funds
+      parameters:
+        - in: header
+          name: x-service-id
+          required: true
+          schema:
+            type: string
+          example: transaction-service
+        - in: header
+          name: x-service-secret
+          required: true
+          schema:
+            type: string
+        - in: header
+          name: x-user-id
+          required: true
+          schema:
+            type: integer
+          example: 123
+        - in: header
+          name: idempotency-key
+          required: false
+          schema:
+            type: string
+          example: offramp-payment-unique-id-456
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - walletId
+                - amount
+                - accountDetails
+              properties:
+                walletId:
+                  type: string
+                  example: wallet_abc123
+                transactionId:
+                  type: string
+                  example: txn_def456
+                paymentMethodId:
+                  type: string
+                  example: pm_bank_002
+                amount:
+                  type: string
+                  example: "25000"
+                currency:
+                  type: string
+                  example: INR
+                accountDetails:
+                  type: object
+                  properties:
+                    accountNumber:
+                      type: string
+                      example: "1234567890"
+                    ifsc:
+                      type: string
+                      example: SBIN0001234
+                    bankName:
+                      type: string
+                      example: State Bank of India
+                metadata:
+                  type: object
+                  example:
+                    purpose: withdrawal
+                    requestedBy: user
+      responses:
+        "200":
+          description: Off-ramp payment processed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Off-ramp payment processed successfully
+                  data:
+                    type: object
+                    properties:
+                      payment:
+                        type: object
+                        properties:
+                          id:
+                            type: string
+                            example: pay_def456
+                          status:
+                            type: string
+                            example: SUCCESS
+                          amount:
+                            type: integer
+                            example: 25000
+                          currency:
+                            type: string
+                            example: INR
+                          transactionId:
+                            type: string
+                            example: txn_def456
+                          gatewayReference:
+                            type: string
+                            example: gateway_ref_789
+                      paymentMethod:
+                        type: string
+                        example: BANK_TRANSFER
+                      referenceId:
+                        type: string
+                        example: gateway_ref_789
+                  metadata:
+                    type: object
+                    properties:
+                      paymentType:
+                        type: string
+                        example: OFFRAMP
+                      attemptNumber:
+                        type: integer
+                        example: 1
+              examples:
+                success:
+                  value:
+                    success: true
+                    message: Off-ramp payment processed successfully
+                    data:
+                      payment:
+                        id: pay_def456
+                        status: SUCCESS
+                        amount: 25000
+                        currency: INR
+                        transactionId: txn_def456
+                        gatewayReference: gateway_ref_789
+                      paymentMethod: BANK_TRANSFER
+                      referenceId: gateway_ref_789
+                    metadata:
+                      paymentType: OFFRAMP
+                      attemptNumber: 1
+                idempotent:
+                  value:
+                    success: true
+                    message: Request already processed (idempotent)
+                    data:
+                      payment:
+                        id: pay_def456
+                        status: SUCCESS
+                        amount: 25000
+                        currency: INR
+                        userId: "123"
+                        walletId: wallet_abc123
+                        transactionId: txn_def456
+                        gatewayReference: gateway_ref_789
+                        createdAt: "2025-12-04T22:27:15.123Z"
+                    metadata:
+                      idempotent: true
+                      originalStatus: SUCCESS
+        "400":
+          description: Validation error or payment gateway failure
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: Invalid beneficiary account
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        example: EXTERNAL_SERVICE_ERROR
+                      type:
+                        type: string
+                        example: EXTERNAL_SERVICE_ERROR
+                      details:
+                        type: string
+                        example: INVALID_ACCOUNT
+                  metadata:
+                    type: object
+                    properties:
+                      payment:
+                        type: object
+                        properties:
+                          id:
+                            type: string
+                            example: pay_def456
+                          status:
+                            type: string
+                            example: FAILED
+                          amount:
+                            type: integer
+                            example: 25000
+                      errorCode:
+                        type: string
+                        example: INVALID_ACCOUNT
+              examples:
+                invalidAccount:
+                  value:
+                    success: false
+                    message: Invalid beneficiary account
+                    error:
+                      code: EXTERNAL_SERVICE_ERROR
+                      type: EXTERNAL_SERVICE_ERROR
+                      details: INVALID_ACCOUNT
+                    metadata:
+                      payment:
+                        id: pay_def456
+                        status: FAILED
+                        amount: 25000
+                      errorCode: INVALID_ACCOUNT
+                validationError:
+                  value:
+                    success: false
+                    message: Invalid request parameters
+                    error:
+                      code: VALIDATION
+                      type: VALIDATION_ERROR
+                      details: '[{"field":"accountDetails","message":"Account number or UPI ID is required"}]'
+        "500":
+          description: Internal server error
