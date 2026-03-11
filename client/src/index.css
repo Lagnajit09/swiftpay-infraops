@@ -6,7 +6,7 @@
   /* e.g., --color-primary: #1d4ed8; */
 }
 
-/* Base styles can be added here using standard CSS */
 body {
+  font-family: "Montserrat", sans-serif;
   @apply antialiased bg-gray-50 text-gray-900;
 }
