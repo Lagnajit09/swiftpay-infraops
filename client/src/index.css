@@ -1,0 +1,12 @@
+@import url("https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap");
+@import "tailwindcss";
+
+@theme {
+  /* Add custom theme variables here */
+  /* e.g., --color-primary: #1d4ed8; */
+}
+
+/* Base styles can be added here using standard CSS */
+body {
+  @apply antialiased bg-gray-50 text-gray-900;
+}
