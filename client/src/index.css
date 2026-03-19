@@ -5,6 +5,42 @@
   --font-sans: "Montserrat", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
 }
 
+@utility glass {
+  background-color: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+@utility glass-dark {
+  background-color: rgba(30, 41, 59, 0.6);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+@utility text-gradient {
+  background-clip: text;
+  color: transparent;
+  background-image: linear-gradient(to right, #6366f1, #8b5cf6);
+}
+
+@utility bg-dashboard {
+  background-color: #fafaf9; /* Stone 50 - warmer */
+  background-image: radial-gradient(#e7e5e4 0.8px, transparent 0.8px);
+  background-size: 32px 32px;
+}
+
+@utility card-shadow {
+  box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.03), 0 2px 6px -1px rgba(0, 0, 0, 0.02);
+}
+
+@utility card-shadow-hover {
+  transition: all 0.3s ease;
+  &:hover {
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.03);
+    transform: translateY(-2px);
+  }
+}
+
 body {
-  @apply font-sans antialiased bg-gray-50 text-gray-900;
+  @apply font-sans antialiased bg-dashboard text-slate-700;
 }

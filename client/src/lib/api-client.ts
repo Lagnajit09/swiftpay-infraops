@@ -12,6 +12,8 @@ export interface ApiResponse<T = any> {
 export interface User {
   userId: string;
   email: string;
+  name?: string;
+  number?: string;
   emailVerified: boolean;
   role: string;
 }

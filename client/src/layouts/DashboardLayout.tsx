@@ -31,44 +31,45 @@ const DashboardLayout = () => {
     navigate("/login");
   };
 
-  const userInitial = user?.email?.charAt(0).toUpperCase() || "U";
+  const userInitial = user?.name?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase() || "U";
+  const userName = user?.name || user?.email?.split('@')[0] || "User";
 
   return (
-    <div className="min-h-screen bg-slate-50 font-sans selection:bg-indigo-500 selection:text-white flex">
+    <div className="min-h-screen bg-dashboard font-sans selection:bg-indigo-500 selection:text-white flex">
       {/* Sidebar Navigation */}
-      <aside className="hidden md:flex flex-col w-64 border-r border-slate-200 bg-white fixed h-full z-10 transition-all duration-300">
-        <div className="flex items-center justify-start h-16 border-b border-slate-200 px-6">
+      <aside className="hidden md:flex flex-col w-72 bg-white fixed h-full z-30 transition-all duration-300 border-r border-slate-200/60 shadow-sm">
+        <div className="flex items-center justify-start h-20 px-8">
           <Link
             to="/dashboard"
-            className="text-2xl font-black text-indigo-600 tracking-tight"
+            className="flex items-center gap-3 group"
           >
-            {/* Logo */}
-            <div className="flex items-center gap-2 cursor-pointer">
-              <div className="bg-indigo-600 p-2 rounded-xl text-white shadow-lg shadow-indigo-200">
-                <Zap className="w-6 h-6 fill-current" />
-              </div>
-              <span className="text-2xl font-black tracking-tight text-slate-800">
-                Swift<span className="text-indigo-600">Pay</span>
-              </span>
+            <div className="bg-indigo-600 p-2.5 rounded-2xl text-white shadow-lg shadow-indigo-600/10 group-hover:scale-105 transition-transform duration-300">
+              <Zap className="w-5 h-5 fill-current" />
             </div>
+            <span className="text-xl font-bold tracking-tight text-slate-900">
+              Swift<span className="text-indigo-600">Pay</span>
+            </span>
           </Link>
         </div>
 
-        <div className="flex-1 overflow-y-auto py-6 px-4 space-y-1">
+        <div className="flex-1 overflow-y-auto py-8 px-6 space-y-2">
+          <p className="px-4 text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-4">
+            General
+          </p>
           {navigation.map((item) => {
             const isActive = location.pathname === item.href;
             return (
               <Link
                 key={item.name}
                 to={item.href}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+                className={`flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-semibold transition-all duration-200 group ${
                   isActive
                     ? "bg-indigo-50 text-indigo-700"
-                    : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                    : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
                 }`}
               >
                 <item.icon
-                  className={`h-5 w-5 ${isActive ? "text-indigo-600" : "text-slate-400"}`}
+                  className={`h-5 w-5 transition-colors duration-200 ${isActive ? "text-indigo-600" : "text-slate-400 group-hover:text-indigo-600"}`}
                 />
                 {item.name}
               </Link>
@@ -76,43 +77,64 @@ const DashboardLayout = () => {
           })}
         </div>
 
-        <div className="p-4 border-t border-slate-200">
-          <button 
-            onClick={handleLogout}
-            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-red-50 hover:text-red-600 w-full transition-colors duration-200 group"
-          >
-            <LogOut className="h-5 w-5 text-slate-400 group-hover:text-red-500" />
-            Sign Out
+        <div className="p-6 border-t border-slate-100">
+          <div className="bg-slate-50 rounded-3xl p-4 mb-6 border border-slate-200/40">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="h-10 w-10 rounded-2xl bg-white flex items-center justify-center text-indigo-600 font-bold border border-slate-200 shadow-sm">
+                {userInitial}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold text-slate-900 truncate">{userName}</p>
+                <p className="text-[10px] font-medium text-slate-500 truncate uppercase tracking-wider">Personal Account</p>
+              </div>
+            </div>
+            <button 
+              onClick={handleLogout}
+              className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-xs font-bold text-slate-500 hover:bg-red-50 hover:text-red-500 transition-all duration-200 group"
+            >
+              <LogOut className="h-4 w-4 transition-transform group-hover:-translate-x-1" />
+              Sign Out
+            </button>
+          </div>
+          
+          <button className="flex items-center justify-center gap-2 w-full py-3.5 bg-slate-900 text-white rounded-2xl text-xs font-bold uppercase tracking-widest shadow-md hover:bg-slate-800 active:scale-[0.98] transition-all">
+            Upgrade Plan
           </button>
         </div>
       </aside>
 
       {/* Main Content */}
-      <div className="flex-1 md:pl-64 flex flex-col min-h-screen transition-all duration-300">
+      <div className="flex-1 md:pl-72 flex flex-col min-h-screen transition-all duration-300">
         {/* Top Navbar */}
-        <header className="h-16 bg-white/80 backdrop-blur-md border-b border-slate-200 sticky top-0 z-20 flex items-center justify-between px-4 sm:px-6 lg:px-8">
+        <header className="h-20 glass sticky top-0 z-20 flex items-center justify-between px-6 sm:px-10 border-b border-slate-200/40">
           <div className="flex items-center md:hidden">
             <Link
               to="/dashboard"
-              className="text-xl font-black text-indigo-600 tracking-tight"
+              className="text-xl font-bold text-slate-900 tracking-tight"
             >
-              SwiftPay
+              Swift<span className="text-indigo-600">Pay</span>
             </Link>
           </div>
 
-          <div className="flex items-center justify-end w-full gap-4">
-            <button className="relative p-2 text-slate-400 hover:text-slate-500 transition-colors rounded-full hover:bg-slate-100">
-              <span className="absolute top-1.5 right-1.5 h-2 w-2 bg-red-500 rounded-full border-2 border-white"></span>
-              <Bell className="h-5 w-5" />
-            </button>
-            <div className="flex items-center gap-3 border-l border-slate-200 pl-4 ml-2">
-              <div className="hidden sm:block text-right">
-                <p className="text-sm font-medium text-slate-900 leading-none">
-                  {user?.userId || "User"}
-                </p>
-                <p className="text-xs text-slate-500 mt-1">{user?.email || "user@example.com"}</p>
+          <div className="flex items-center justify-between w-full">
+            <div className="hidden sm:block">
+              <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+                {navigation.find(n => n.href === location.pathname)?.name || "Overview"}
+              </h2>
+            </div>
+            
+            <div className="flex items-center gap-5">
+              <div className="hidden lg:flex items-center gap-2 bg-slate-50 px-4 py-2 rounded-2xl border border-slate-200/50">
+                <div className="h-1.5 w-1.5 rounded-full bg-emerald-500"></div>
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Secure Connection</span>
               </div>
-              <div className="h-8 w-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-sm border border-indigo-200">
+
+              <button className="relative p-2.5 text-slate-400 hover:text-indigo-600 transition-all rounded-xl hover:bg-indigo-50 group">
+                <span className="absolute top-2.5 right-2.5 h-1.5 w-1.5 bg-indigo-500 rounded-full ring-2 ring-white"></span>
+                <Bell className="h-5 w-5" />
+              </button>
+              
+              <div className="h-10 w-10 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600 font-bold border border-indigo-100 shadow-sm cursor-pointer hover:scale-105 transition-transform">
                 {userInitial}
               </div>
             </div>
@@ -120,7 +142,7 @@ const DashboardLayout = () => {
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
+        <main className="flex-1 p-6 sm:p-10 max-w-7xl mx-auto w-full">
           <Outlet />
         </main>
       </div>
