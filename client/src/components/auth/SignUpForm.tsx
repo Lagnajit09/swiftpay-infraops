@@ -1,16 +1,19 @@
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
-import { Mail, Lock, User, Loader2, ArrowRight } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { Mail, Lock, User, Loader2, ArrowRight, Phone } from "lucide-react";
 import { useToast } from "./ToastProvider";
 import { motion } from "framer-motion";
+import { authApi } from "../../lib/api-client";
 
 const SignUpForm = () => {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { success, error } = useToast();
+  const navigate = useNavigate();
 
   const validate = () => {
     if (!fullName.trim()) {
@@ -29,6 +32,17 @@ const SignUpForm = () => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       error("Please enter a valid email address");
+      return false;
+    }
+
+    if (!phone) {
+      error("Phone number is required");
+      return false;
+    }
+    // Simple regex for E.164-like format (e.g., +919876543210)
+    const phoneRegex = /^\+[1-9]\d{1,14}$/;
+    if (!phoneRegex.test(phone)) {
+      error("Phone number must include country code (e.g., +919000000000)");
       return false;
     }
 
@@ -56,10 +70,19 @@ const SignUpForm = () => {
     setIsLoading(true);
 
     try {
-      // Simulate API call for now since server integration is not yet required
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-
-      success("Account created successfully!");
+      const response = await authApi.signUp({ 
+        email, 
+        password, 
+        name: fullName, 
+        number: phone 
+      });
+      
+      if (response.success) {
+        success("Account created successfully! Please sign in.");
+        navigate("/login");
+      } else {
+        error(response.message || "Failed to create account");
+      }
     } catch (err: any) {
       error(err.message || "Failed to create account. Please try again.");
     } finally {
@@ -102,6 +125,24 @@ const SignUpForm = () => {
               onChange={(e) => setEmail(e.target.value)}
               className="block w-full pl-10 pr-3 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-600 focus:border-transparent transition-all outline-none text-slate-900 bg-white placeholder-slate-400 font-medium"
               placeholder="you@example.com"
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-bold text-slate-700 mb-2">
+            Phone Number
+          </label>
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <Phone className="h-5 w-5 text-slate-400" />
+            </div>
+            <input
+              type="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              className="block w-full pl-10 pr-3 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-600 focus:border-transparent transition-all outline-none text-slate-900 bg-white placeholder-slate-400 font-medium"
+              placeholder="+919000000000"
             />
           </div>
         </div>

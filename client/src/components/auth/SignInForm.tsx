@@ -1,14 +1,18 @@
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Mail, Lock, Loader2, ArrowRight } from "lucide-react";
 import { useToast } from "./ToastProvider";
 import { motion } from "framer-motion";
+import { authApi } from "../../lib/api-client";
+import { useAuth } from "../../contexts/AuthContext";
 
 const SignInForm = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { success, error } = useToast();
+  const { login } = useAuth();
+  const navigate = useNavigate();
 
   const validate = () => {
     if (!email) {
@@ -34,14 +38,15 @@ const SignInForm = () => {
     setIsLoading(true);
 
     try {
-      // Simulate API call for now since server integration is not yet required
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-
-      // Simulating a random failure for demonstration if wanted, but keep it simple
-      success("Successfully signed in!");
-
-      // In a real scenario, this is where we would redirect or set auth state.
-      // e.g., navigate('/dashboard');
+      const response = await authApi.signIn({ email, password });
+      
+      if (response.success) {
+        success("Successfully signed in!");
+        login(response.data.user);
+        navigate("/dashboard");
+      } else {
+        error(response.message || "Invalid credentials");
+      }
     } catch (err: any) {
       error(err.message || "An unexpected error occurred. Please try again.");
     } finally {
