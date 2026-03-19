@@ -167,3 +167,12 @@ export const authApi = {
       }
     ),
 };
+
+export const userApi = {
+  me: () => apiRequest<ApiResponse<User>>("/api/user/me"),
+  updateUser: (data: any) =>
+    apiRequest<ApiResponse<User>>("/api/user/update-user", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+};

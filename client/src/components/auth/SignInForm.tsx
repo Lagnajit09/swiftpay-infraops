@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Mail, Lock, Loader2, ArrowRight } from "lucide-react";
 import { useToast } from "./ToastProvider";
 import { motion } from "framer-motion";
@@ -13,6 +13,11 @@ const SignInForm = () => {
   const { success, error } = useToast();
   const { login } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Get redirectUrl from query params
+  const params = new URLSearchParams(location.search);
+  const redirectUrl = params.get("redirectUrl") || "/dashboard";
 
   const validate = () => {
     if (!email) {
@@ -43,7 +48,7 @@ const SignInForm = () => {
       if (response.success) {
         success("Successfully signed in!");
         login(response.data.user);
-        navigate("/dashboard");
+        navigate(redirectUrl, { replace: true });
       } else {
         error(response.message || "Invalid credentials");
       }
