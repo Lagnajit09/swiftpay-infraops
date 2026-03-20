@@ -7,6 +7,7 @@ const services = [
   "main",
   "transaction-service",
   "wallet-service",
+  "payment-service",
 ];
 
 const rootDir = __dirname;
@@ -14,22 +15,22 @@ const rootDir = __dirname;
 console.log("Preparing to start services...");
 
 // 1. Copy .env.prod to .env
-services.forEach((service) => {
-  const servicePath = path.join(rootDir, service);
-  const envProdPath = path.join(servicePath, ".env.prod");
-  const envPath = path.join(servicePath, ".env");
+// services.forEach((service) => {
+//   const servicePath = path.join(rootDir, service);
+//   const envProdPath = path.join(servicePath, ".env.prod");
+//   const envPath = path.join(servicePath, ".env");
 
-  if (fs.existsSync(envProdPath)) {
-    try {
-      fs.copyFileSync(envProdPath, envPath);
-      console.log(`[${service}] Copied .env.prod to .env`);
-    } catch (err) {
-      console.error(`[${service}] Failed to copy .env.prod:`, err.message);
-    }
-  } else {
-    console.warn(`[${service}] .env.prod not found, skipping copy.`);
-  }
-});
+//   if (fs.existsSync(envProdPath)) {
+//     try {
+//       fs.copyFileSync(envProdPath, envPath);
+//       console.log(`[${service}] Copied .env.prod to .env`);
+//     } catch (err) {
+//       console.error(`[${service}] Failed to copy .env.prod:`, err.message);
+//     }
+//   } else {
+//     console.warn(`[${service}] .env.prod not found, skipping copy.`);
+//   }
+// });
 
 // 2. Construct arguments for concurrently
 // We use npx concurrently to run the commands in parallel
@@ -62,7 +63,7 @@ const concurrentlyArgs = commands
 console.log("\nStarting all services simultaneously...\n");
 
 const finalCommand = `npx concurrently --kill-others-on-fail --prefix-colors "auto" --names "${services.join(
-  ","
+  ",",
 )}" ${concurrentlyArgs}`;
 
 try {
