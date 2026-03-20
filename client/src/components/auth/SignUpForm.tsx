@@ -4,6 +4,7 @@ import { Mail, Lock, User, Loader2, ArrowRight, Phone } from "lucide-react";
 import { useToast } from "./ToastProvider";
 import { motion } from "framer-motion";
 import { authApi } from "../../lib/api-client";
+import { useAuth } from "../../contexts/AuthContext";
 
 const SignUpForm = () => {
   const [fullName, setFullName] = useState("");
@@ -13,6 +14,7 @@ const SignUpForm = () => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { success, error } = useToast();
+  const { login } = useAuth();
   const navigate = useNavigate();
 
   const validate = () => {
@@ -70,16 +72,36 @@ const SignUpForm = () => {
     setIsLoading(true);
 
     try {
-      const response = await authApi.signUp({ 
-        email, 
-        password, 
-        name: fullName, 
-        number: phone 
+      const response = await authApi.signUp({
+        email,
+        password,
+        name: fullName,
+        number: phone,
       });
-      
+
       if (response.success) {
-        success("Account created successfully! Please sign in.");
-        navigate("/login");
+        // Store credentials for auto-signin after email verification
+        localStorage.setItem("signup_email", email);
+        localStorage.setItem("signup_password", password);
+
+        success(
+          "Account created successfully! Please check your email for a verification link.",
+        );
+
+        // Perform Signin on successful Signup
+        const signinResponse = await authApi.signIn({ email, password });
+        if (signinResponse.success) {
+          // Update auth state in context
+          login(signinResponse.data.user);
+
+          // Cleanup credentials
+          localStorage.removeItem("signup_email");
+          localStorage.removeItem("signup_password");
+
+          // Redirect to dashboard
+          navigate("/dashboard", { replace: true });
+          return;
+        }
       } else {
         error(response.message || "Failed to create account");
       }

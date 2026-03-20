@@ -83,7 +83,8 @@ async function handleResponse<T>(response: Response): Promise<T> {
   const data = isJson ? await response.json() : await response.text();
 
   if (!response.ok) {
-    const message = (data && typeof data === "object" && data.message) || response.statusText;
+    const message =
+      (data && typeof data === "object" && data.message) || response.statusText;
     throw new Error(message);
   }
 
@@ -92,7 +93,7 @@ async function handleResponse<T>(response: Response): Promise<T> {
 
 const apiRequest = async <T>(
   endpoint: string,
-  options: RequestInit = {}
+  options: RequestInit = {},
 ): Promise<T> => {
   const url = `${API_BASE_URL}${endpoint}`;
   const response = await fetch(url, {
@@ -129,7 +130,7 @@ export const authApi = {
 
   verifyEmail: (token: string) =>
     apiRequest<ApiResponse<{ emailVerified: boolean }>>(
-      `/api/auth/verify-email?token=${encodeURIComponent(token)}`
+      `/api/auth/verify-email?token=${token}`,
     ),
 
   requestPasswordReset: (email: string) =>
@@ -139,21 +140,30 @@ export const authApi = {
     }),
 
   resetPassword: (data: ResetPasswordRequest) =>
-    apiRequest<ApiResponse<{ passwordReset: boolean }>>("/api/auth/reset-password", {
-      method: "POST",
-      body: JSON.stringify(data),
-    }),
+    apiRequest<ApiResponse<{ passwordReset: boolean }>>(
+      "/api/auth/reset-password",
+      {
+        method: "POST",
+        body: JSON.stringify(data),
+      },
+    ),
 
   changePassword: (data: ChangePasswordRequest) =>
-    apiRequest<ApiResponse<{ passwordChanged: boolean }>>("/api/auth/change-password", {
-      method: "POST",
-      body: JSON.stringify(data),
-    }),
+    apiRequest<ApiResponse<{ passwordChanged: boolean }>>(
+      "/api/auth/change-password",
+      {
+        method: "POST",
+        body: JSON.stringify(data),
+      },
+    ),
 
   requestEmailVerification: () =>
-    apiRequest<ApiResponse<{ email: string }>>("/api/auth/request-email-verification", {
-      method: "POST",
-    }),
+    apiRequest<ApiResponse<{ email: string }>>(
+      "/api/auth/request-email-verification",
+      {
+        method: "POST",
+      },
+    ),
 
   getSecurityInfo: () =>
     apiRequest<ApiResponse<SecurityInfo>>("/api/auth/security-info"),
@@ -166,14 +176,14 @@ export const authApi = {
       `/api/auth/sessions/${sessionId}`,
       {
         method: "DELETE",
-      }
+      },
     ),
 };
 
 export const userApi = {
-  me: () => apiRequest<ApiResponse<User>>("/api/user/me"),
+  me: () => apiRequest<ApiResponse<{ user: User }>>("/api/user/me"),
   updateUser: (data: any) =>
-    apiRequest<ApiResponse<User>>("/api/user/update-user", {
+    apiRequest<ApiResponse<{ user: User }>>("/api/user/update-user", {
       method: "POST",
       body: JSON.stringify(data),
     }),

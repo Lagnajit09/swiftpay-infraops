@@ -1,4 +1,10 @@
-import React, { createContext, useContext, useState, useEffect, type ReactNode } from "react";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  type ReactNode,
+} from "react";
 import { authApi, userApi, type User } from "../lib/api-client";
 
 interface AuthContextType {
@@ -12,12 +18,15 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+export const AuthProvider: React.FC<{ children: ReactNode }> = ({
+  children,
+}) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   const login = (userData: User) => {
     setUser(userData);
+    setIsLoading(false);
   };
 
   const logout = async () => {
@@ -34,8 +43,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setIsLoading(true);
     try {
       const response = await userApi.me();
-      if (response.success && response.data) {
-        setUser(response.data);
+      if (response.success && response.data?.user) {
+        setUser(response.data.user);
       } else {
         setUser(null);
       }

@@ -1,7 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { CheckCircle, XCircle, Loader2, ArrowRight } from "lucide-react";
 import { motion } from "framer-motion";
+import { authApi } from "../../lib/api-client";
+import { useAuth } from "../../contexts/AuthContext";
+
 
 const EmailConfirmationUI = () => {
   const [searchParams] = useSearchParams();
@@ -11,31 +14,44 @@ const EmailConfirmationUI = () => {
     "loading",
   );
 
+  const { checkAuth } = useAuth();
+  const hasVerified = useRef(false);
+
   useEffect(() => {
-    // In a real application, you would make an API call here with the token
-    // to verify the email address. We are simulating it for the frontend.
-    const verifyEmail = async () => {
+    const mainFlow = async () => {
+      // Prevent double execution in React Strict Mode which incorrectly consumes token
+      if (hasVerified.current) return;
+      hasVerified.current = true;
+
+      // Step A: Verification
       try {
         if (!token) {
           throw new Error("Invalid or missing verification token.");
         }
 
-        // Simulate API verification wait time
-        await new Promise((resolve) => setTimeout(resolve, 2000));
-
-        // Let's pretend some tokens are bad for UI demonstration (e.g. token=bad)
-        if (token === "bad") {
-          throw new Error("This verification link has expired or is invalid.");
+        const response = await authApi.verifyEmail(token);
+        if (response.success) {
+          setStatus("success");
+          // Refresh user session to update the 'emailVerified' flag in context
+          await checkAuth();
+        } else {
+          setStatus("error");
         }
-
-        setStatus("success");
-      } catch (err) {
-        setStatus("error");
+      } catch (err: any) {
+        console.error("Verification error:", err);
+        
+        // Handle case where token is legitimately already used/verified in a previous session
+        if (err.message && err.message.toLowerCase().includes("already")) {
+          setStatus("success");
+          await checkAuth();
+        } else {
+          setStatus("error");
+        }
       }
     };
 
-    verifyEmail();
-  }, [token]);
+    mainFlow();
+  }, [token, checkAuth]);
 
   return (
     <div className="space-y-8 text-center pt-8">
@@ -85,10 +101,10 @@ const EmailConfirmationUI = () => {
           </div>
 
           <Link
-            to="/login"
+            to="/dashboard"
             className="w-full sm:w-auto inline-flex items-center justify-center gap-2 py-4 px-8 border border-transparent rounded-full shadow-md shadow-indigo-200 text-base font-bold text-white bg-slate-900 hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-600 transition-all group mt-4"
           >
-            Continue to Sign In
+            Go to Dashboard
             <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
           </Link>
         </motion.div>
@@ -115,6 +131,14 @@ const EmailConfirmationUI = () => {
               Please try requesting a new one.
             </p>
           </div>
+
+          <Link
+            to="/dashboard"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 py-4 px-8 border border-transparent rounded-full shadow-md shadow-indigo-200 text-base font-bold text-white bg-slate-900 hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-600 transition-all group mt-4"
+          >
+            Go to Dashboard
+            <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+          </Link>
 
           <Link
             to="/register"
