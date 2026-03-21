@@ -211,3 +211,59 @@ export interface WalletResponse {
 export const walletApi = {
   getWallet: () => apiRequest<WalletResponse>("/api/wallet/"),
 };
+
+export interface AccountDetails {
+  accountNumber: string;
+  ifsc: string;
+  bankName: string;
+}
+
+export interface TransactionRequest {
+  walletId?: string;
+  amount: number;
+  description: string;
+  currency: string;
+  accountDetails: AccountDetails;
+}
+
+export interface TransactionData {
+  transactionId: string;
+  status: string;
+  amount: string;
+  currency: string;
+  balance: string;
+  paymentMethod: string;
+  referenceId: string;
+  ledgerEntryId: string;
+}
+
+export interface TransactionMetadata {
+  transactionType: string;
+  flow: string;
+}
+
+export interface TransactionResponse {
+  success: boolean;
+  message: string;
+  data: TransactionData;
+  metadata: TransactionMetadata;
+}
+
+export const transactionApi = {
+  addMoney: (data: TransactionRequest, idempotencyKey: string) =>
+    apiRequest<TransactionResponse>("/api/transaction/add-money", {
+      method: "POST",
+      headers: {
+        "idempotency-key": idempotencyKey,
+      },
+      body: JSON.stringify(data),
+    }),
+  withdrawMoney: (data: TransactionRequest, idempotencyKey: string) =>
+    apiRequest<TransactionResponse>("/api/transaction/withdraw-money", {
+      method: "POST",
+      headers: {
+        "idempotency-key": idempotencyKey,
+      },
+      body: JSON.stringify(data),
+    }),
+};
