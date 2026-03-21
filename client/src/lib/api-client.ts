@@ -16,6 +16,7 @@ export interface User {
   number?: string;
   emailVerified: boolean;
   role: string;
+  walletID?: string;
 }
 
 export interface Session {
@@ -187,4 +188,26 @@ export const userApi = {
       method: "POST",
       body: JSON.stringify(data),
     }),
+};
+
+export interface WalletData {
+  walletId: string;
+  currency: string;
+  balance: string;
+  status: string;
+}
+
+export interface WalletMetadata {
+  created: boolean;
+}
+
+export interface WalletResponse {
+  success: boolean;
+  message: string;
+  data: WalletData;
+  metadata: WalletMetadata;
+}
+
+export const walletApi = {
+  getWallet: () => apiRequest<WalletResponse>("/api/wallet/"),
 };
