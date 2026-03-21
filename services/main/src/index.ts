@@ -50,7 +50,7 @@ app.use(
         imgSrc: ["'self'", "data:", "https:"],
       },
     },
-  })
+  }),
 );
 
 // CORS configuration
@@ -59,7 +59,7 @@ const corsOptions = {
   credentials: true,
   optionsSuccessStatus: 200,
   methods: ["GET", "POST", "PUT", "DELETE"],
-  allowedHeaders: ["Content-Type", "Authorization"],
+  allowedHeaders: ["Content-Type", "Authorization", "Idempotency-key"],
 };
 app.use(cors(corsOptions));
 
@@ -88,7 +88,7 @@ app.use(
     err: Error,
     req: express.Request,
     res: express.Response,
-    next: express.NextFunction
+    next: express.NextFunction,
   ) => {
     console.error("Unhandled error:", err);
     return errorResponse(
@@ -96,9 +96,9 @@ app.use(
       500,
       "Internal server error",
       err,
-      ErrorType.INTERNAL_ERROR
+      ErrorType.INTERNAL_ERROR,
     );
-  }
+  },
 );
 
 // Handle 404
@@ -108,7 +108,7 @@ app.use((req: express.Request, res: express.Response) => {
     404,
     "Route not found",
     new Error(`Cannot ${req.method} ${req.path}`),
-    ErrorType.NOT_FOUND_ERROR
+    ErrorType.NOT_FOUND_ERROR,
   );
 });
 

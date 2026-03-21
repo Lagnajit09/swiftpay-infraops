@@ -10,7 +10,7 @@ import { logInternalError } from "../utils/errorLogger";
 export async function requireAuth(
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) {
   try {
     const sid =
@@ -22,7 +22,7 @@ export async function requireAuth(
         res,
         "No session found. Please signin first.",
         "Session ID not found in cookies or headers",
-        { hasSessionCookie: !!(req as any).cookies?.sessionId }
+        { hasSessionCookie: !!(req as any).cookies?.sessionId },
       );
     }
 
@@ -33,7 +33,7 @@ export async function requireAuth(
         res,
         "Invalid or expired session.",
         "Session verification returned invalid user data",
-        { sessionId: sid.substring(0, 10) + "..." }
+        { sessionId: sid.substring(0, 10) + "..." },
       );
     }
 
@@ -51,7 +51,7 @@ export async function requireAuth(
       res,
       "Unauthorized.",
       err.message || "Authentication failed",
-      { authenticated: false }
+      { authenticated: false },
     );
   }
 }

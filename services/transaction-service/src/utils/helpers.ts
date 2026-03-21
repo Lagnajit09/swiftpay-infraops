@@ -13,18 +13,22 @@ import { logDatabaseError, logInternalError } from "./errorLogger";
 export async function handleTransactionError(
   error: any,
   res: Response,
-  req?: Request
+  req?: Request,
 ) {
   const msg = String(error?.message || "");
 
   // Handle idempotency duplicate
-  if (msg.includes("Unique constraint") || msg.includes("idempotency")) {
+  if (
+    (msg.includes("Unique constraint") && msg.includes("idempotency")) ||
+    msg.includes("Duplicate idempotency") ||
+    error.code === "P2002"
+  ) {
     return successResponse(
       res,
       200,
       "Duplicate ignored (idempotent)",
       { idempotent: true },
-      { duplicateRequest: true }
+      { duplicateRequest: true },
     );
   }
 
@@ -34,14 +38,14 @@ export async function handleTransactionError(
       await logDatabaseError(
         "Database connection failed during transaction",
         error,
-        req
+        req,
       );
     }
 
     return databaseErrorResponse(
       res,
       "Database connection failed. Please try again later.",
-      error
+      error,
     );
   }
 
@@ -58,7 +62,7 @@ export async function handleTransactionError(
     return conflictErrorResponse(
       res,
       "Transaction conflict. Please try again.",
-      "A concurrent transaction conflict occurred"
+      "A concurrent transaction conflict occurred",
     );
   }
 
@@ -68,7 +72,7 @@ export async function handleTransactionError(
       await logDatabaseError(
         "Database constraint error during transaction",
         error,
-        req
+        req,
       );
     }
 
@@ -87,6 +91,6 @@ export async function handleTransactionError(
     500,
     "Transaction operation failed",
     error,
-    ErrorType.INTERNAL_ERROR
+    ErrorType.INTERNAL_ERROR,
   );
 }
