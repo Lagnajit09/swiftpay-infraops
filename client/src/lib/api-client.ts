@@ -249,6 +249,12 @@ export interface TransactionResponse {
   metadata: TransactionMetadata;
 }
 
+export interface P2PTransferRequest {
+  recipientWalletId: string;
+  amount: number;
+  description?: string;
+}
+
 export const transactionApi = {
   addMoney: (data: TransactionRequest, idempotencyKey: string) =>
     apiRequest<TransactionResponse>("/api/transaction/add-money", {
@@ -260,6 +266,14 @@ export const transactionApi = {
     }),
   withdrawMoney: (data: TransactionRequest, idempotencyKey: string) =>
     apiRequest<TransactionResponse>("/api/transaction/withdraw-money", {
+      method: "POST",
+      headers: {
+        "idempotency-key": idempotencyKey,
+      },
+      body: JSON.stringify(data),
+    }),
+  p2pTransfer: (data: P2PTransferRequest, idempotencyKey: string) =>
+    apiRequest<TransactionResponse>("/api/transaction/p2p", {
       method: "POST",
       headers: {
         "idempotency-key": idempotencyKey,

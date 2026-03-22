@@ -49,13 +49,13 @@ paths:
             schema:
               type: object
               required:
-                - recipientUserId
+                - recipientWalletId
                 - amount
               properties:
-                recipientUserId:
+                recipientWalletId:
                   type: string
-                  description: Recipient's user ID
-                  example: user_def456
+                  description: Recipient's wallet ID
+                  example: wallet_def456
                 amount:
                   type: string
                   description: Amount in paise
