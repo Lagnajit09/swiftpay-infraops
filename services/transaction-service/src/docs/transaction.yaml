@@ -512,13 +512,13 @@ paths:
             schema:
               type: object
               required:
-                - recipientUserId
+                - recipientWalletId
                 - amount
               properties:
-                recipientUserId:
+                recipientWalletId:
                   type: string
-                  description: Recipient's user ID
-                  example: "456"
+                  description: Recipient's wallet ID
+                  example: "wlt_def456"
                 amount:
                   type: string
                   description: Amount in smallest currency unit
@@ -589,7 +589,7 @@ paths:
                     example: false
                   message:
                     type: string
-                    example: Recipient user ID is required
+                    example: Recipient wallet ID is required
                   error:
                     type: object
                     properties:
@@ -601,16 +601,16 @@ paths:
                         example: VALIDATION_ERROR
                       details:
                         type: string
-                        example: '[{"field":"recipientUserId","message":"Recipient user ID is required"}]'
+                        example: '[{"field":"recipientWalletId","message":"Recipient wallet ID is required"}]'
               examples:
                 missingRecipient:
                   value:
                     success: false
-                    message: Recipient user ID is required
+                    message: Recipient wallet ID is required
                     error:
                       code: VALIDATION
                       type: VALIDATION_ERROR
-                      details: '[{"field":"recipientUserId","message":"Recipient user ID is required"}]'
+                      details: '[{"field":"recipientWalletId","message":"Recipient wallet ID is required"}]'
                 selfTransfer:
                   value:
                     success: false
@@ -618,7 +618,7 @@ paths:
                     error:
                       code: VALIDATION
                       type: VALIDATION_ERROR
-                      details: '[{"field":"recipientUserId","message":"Sender and recipient cannot be the same"}]'
+                      details: '[{"field":"recipientWalletId","message":"Sender and recipient wallet cannot be the same"}]'
         "500":
           description: Wallet service error
           content:

@@ -10,7 +10,7 @@ const WALLET_SERVICE_URL =
  */
 export async function p2pTransfer(
   options: WalletProxyOptions & {
-    recipientUserId: string;
+    recipientWalletId: string;
     amount: string | number;
     description?: string;
     debitReferenceId?: string;
@@ -35,7 +35,7 @@ export async function p2pTransfer(
     const res: any = await axios.post(
       `${WALLET_SERVICE_URL}/api/wallet/p2p`,
       {
-        recipientUserId: options.recipientUserId,
+        recipientWalletId: options.recipientWalletId,
         amount: options.amount,
         description: options.description,
         referenceId: {

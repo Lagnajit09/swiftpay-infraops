@@ -12,6 +12,7 @@ export interface WalletResponse {
   data?: {
     senderWallet?: string;
     recipientWallet?: string;
+    recipientUserId?: string;
     currency?: string;
     balance?: string;
     status?: string;

@@ -22,7 +22,7 @@ export async function p2pTxn(req: Request, res: Response) {
   try {
     const senderUserId = req.user?.userId || req.headers["x-user-id"];
     const idemKey = req.header(idempotencyHeader) || undefined;
-    const { recipientUserId, amount, description, referenceId, metadata } =
+    const { recipientWalletId, amount, description, referenceId, metadata } =
       req.body;
 
     if (!senderUserId) {
@@ -57,31 +57,15 @@ export async function p2pTxn(req: Request, res: Response) {
       ]);
     }
 
-    if (!recipientUserId) {
+    if (!recipientWalletId) {
       await logValidationError(
-        "Missing recipient user ID",
-        new Error("Recipient user ID is required"),
+        "Missing recipient wallet ID",
+        new Error("Recipient wallet ID is required"),
         req
       );
 
-      return validationErrorResponse(res, "Recipient user ID is required", [
-        { field: "recipientUserId", message: "Recipient user ID is required" },
-      ]);
-    }
-
-    if (String(senderUserId) === String(recipientUserId)) {
-      await logValidationError(
-        "Self-transfer attempt",
-        new Error("Cannot transfer to yourself"),
-        req,
-        { senderUserId, recipientUserId }
-      );
-
-      return validationErrorResponse(res, "Cannot transfer to yourself", [
-        {
-          field: "recipientUserId",
-          message: "Sender and recipient cannot be the same",
-        },
+      return validationErrorResponse(res, "Recipient wallet ID is required", [
+        { field: "recipientWalletId", message: "Recipient wallet ID is required" },
       ]);
     }
 
@@ -98,9 +82,14 @@ export async function p2pTxn(req: Request, res: Response) {
         throw new Error("INSUFFICIENT_FUNDS");
       }
 
-      // Ensure the recipient's wallet exists
+      // Self-transfer guard — compare wallet IDs directly
+      if (senderWallet.id === String(recipientWalletId)) {
+        throw new Error("SELF_TRANSFER");
+      }
+
+      // Ensure the recipient's wallet exists (looked up by wallet ID)
       const recipientWallet = await tx.wallet.findUnique({
-        where: { userId: String(recipientUserId) },
+        where: { id: String(recipientWalletId) },
       });
       if (!recipientWallet) throw new Error("RECIPIENT_WALLET_NOT_FOUND");
 
@@ -114,7 +103,7 @@ export async function p2pTxn(req: Request, res: Response) {
           walletId: senderWallet.id,
           type: "DEBIT",
           amount: BigInt(sanitizedAmount),
-          description: sanitizedDesc || `P2P transfer to ${recipientUserId}`,
+          description: sanitizedDesc || `P2P transfer to wallet ${recipientWalletId}`,
           referenceId: sanitizedDebitRefId,
           idempotencyKey: idemKey,
           metadata: metadata,
@@ -153,6 +142,7 @@ export async function p2pTxn(req: Request, res: Response) {
       return {
         senderWallet: senderWallet.id,
         recipientWallet: recipientWallet.id,
+        recipientUserId: recipientWallet.userId,
         senderBalance: updatedSender.balance,
         recipientBalance: updatedRecipient.balance,
         debitEntryId: debitEntry.id,
@@ -167,6 +157,7 @@ export async function p2pTxn(req: Request, res: Response) {
       {
         senderWallet: result.senderWallet,
         recipientWallet: result.recipientWallet,
+        recipientUserId: result.recipientUserId,
         senderBalance: result.senderBalance.toString(),
         recipientBalance: result.recipientBalance.toString(),
         ledgerEntryId: {
@@ -196,6 +187,21 @@ export async function p2pTxn(req: Request, res: Response) {
     }
 
     // Business logic errors
+    if (msg === "SELF_TRANSFER") {
+      await logValidationError(
+        "Self-transfer attempt",
+        error,
+        req,
+        { recipientWalletId: req.body?.recipientWalletId }
+      );
+
+      return validationErrorResponse(res, "Cannot transfer to yourself", [
+        {
+          field: "recipientWalletId",
+          message: "Sender and recipient wallet cannot be the same",
+        },
+      ]);
+    }
     if (msg === "INSUFFICIENT_FUNDS") {
       await logValidationError(
         "Insufficient funds for P2P transfer",
@@ -222,7 +228,7 @@ export async function p2pTxn(req: Request, res: Response) {
       return notFoundErrorResponse(
         res,
         "Recipient wallet not found",
-        "No wallet exists for the recipient user"
+        "No wallet exists for the provided wallet ID"
       );
     }
     if (msg === "SENDER_WALLET_NOT_ACTIVE") {
@@ -290,7 +296,7 @@ export async function p2pTxn(req: Request, res: Response) {
     await logInternalError("P2P transfer failed", error, req, {
       amount: req.body?.amount,
       senderUserId: req.user?.userId || req.headers["x-user-id"],
-      recipientUserId: req.body?.recipientUserId,
+      recipientWalletId: req.body?.recipientWalletId,
     });
 
     return errorResponse(

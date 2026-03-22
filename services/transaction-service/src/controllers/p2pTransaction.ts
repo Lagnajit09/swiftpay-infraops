@@ -20,7 +20,7 @@ export async function p2pTransaction(req: Request, res: Response) {
   try {
     const userId = req.user?.userId || req.headers["x-user-id"];
     const idemKey = req.header(idempotencyHeader) || undefined;
-    const { recipientUserId, amount, description, paymentMethodId } = req.body;
+    const { recipientWalletId, amount, description, paymentMethodId } = req.body;
 
     if (!userId) {
       return authErrorResponse(
@@ -47,31 +47,15 @@ export async function p2pTransaction(req: Request, res: Response) {
       ]);
     }
 
-    if (!recipientUserId) {
+    if (!recipientWalletId) {
       await logValidationError(
-        "Missing recipient user ID",
-        new Error("Recipient user ID is required"),
+        "Missing recipient wallet ID",
+        new Error("Recipient wallet ID is required"),
         req
       );
 
-      return validationErrorResponse(res, "Recipient user ID is required", [
-        { field: "recipientUserId", message: "Recipient user ID is required" },
-      ]);
-    }
-
-    if (String(userId) === String(recipientUserId)) {
-      await logValidationError(
-        "Self-transfer attempt",
-        new Error("Cannot transfer to yourself"),
-        req,
-        { userId, recipientUserId }
-      );
-
-      return validationErrorResponse(res, "Cannot transfer to yourself", [
-        {
-          field: "recipientUserId",
-          message: "Sender and recipient cannot be the same",
-        },
+      return validationErrorResponse(res, "Recipient wallet ID is required", [
+        { field: "recipientWalletId", message: "Recipient wallet ID is required" },
       ]);
     }
 
@@ -89,16 +73,17 @@ export async function p2pTransaction(req: Request, res: Response) {
         paymentMethodId: paymentMethodId || null,
         idempotencyKey: idemKey,
         metadata: {
-          recipientUserId: String(recipientUserId),
+          recipientWalletId: String(recipientWalletId),
         },
       },
     });
 
     // Start database transaction for creating credit transaction record of the receiver
+    // userId will be populated from the wallet-service response
     const creditTransaction = await prisma.transaction.create({
       data: {
-        userId: String(recipientUserId),
-        walletId: `temp-${recipientUserId}`, // Will be updated after wallet call
+        userId: `temp-${recipientWalletId}`, // Will be updated with real userId from wallet-service response
+        walletId: String(recipientWalletId), // Wallet ID is known upfront
         amount: BigInt(sanitizedAmount),
         currency: "INR",
         type: "CREDIT",
@@ -109,6 +94,7 @@ export async function p2pTransaction(req: Request, res: Response) {
         idempotencyKey: idemKey,
         metadata: {
           senderUserId: String(userId),
+          recipientWalletId: String(recipientWalletId),
         },
       },
     });
@@ -117,7 +103,7 @@ export async function p2pTransaction(req: Request, res: Response) {
       // Call wallet service to execute P2P transfer
       const walletResponse = await p2pTransfer({
         userId: String(userId),
-        recipientUserId: String(recipientUserId),
+        recipientWalletId: String(recipientWalletId),
         amount: sanitizedAmount,
         description: sanitizedDesc,
         idempotencyKey: idemKey,
@@ -125,7 +111,7 @@ export async function p2pTransaction(req: Request, res: Response) {
         creditReferenceId: creditTransaction.id,
         metadata: {
           senderUserId: String(userId),
-          recipientUserId: String(recipientUserId),
+          recipientWalletId: String(recipientWalletId),
           transactionId: {
             debitTransactionId: debitTransaction.id,
             creditTransactionId: creditTransaction.id,
@@ -134,6 +120,9 @@ export async function p2pTransaction(req: Request, res: Response) {
           flow: "P2P",
         },
       });
+
+      // recipientUserId returned by wallet-service for proper record stamping
+      const recipientUserId = walletResponse.data?.recipientUserId || `temp-${recipientWalletId}`;
 
       // Update transaction status to SUCCESS
       const updatedDebitTransaction = await prisma.transaction.update({
@@ -157,6 +146,7 @@ export async function p2pTransaction(req: Request, res: Response) {
         where: { id: creditTransaction.id },
         data: {
           status: "SUCCESS",
+          userId: String(recipientUserId), // Stamp the real userId from wallet-service
           walletId: walletResponse.data?.recipientWallet || "",
           ledgerReferenceId:
             typeof walletResponse.data?.ledgerEntryId !== "string"
@@ -242,3 +232,4 @@ export async function p2pTransaction(req: Request, res: Response) {
     return handleTransactionError(error, res, req);
   }
 }
+
