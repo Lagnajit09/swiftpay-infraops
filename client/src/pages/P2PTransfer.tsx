@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { ArrowRightLeft } from "lucide-react";
-import { transactionApi } from "../lib/api-client";
+import { transactionApi, walletApi } from "../lib/api-client";
 import { useToast } from "../components/auth/ToastProvider";
 import QuickSendList, {
   MOCK_CONTACTS,
@@ -10,6 +10,7 @@ import TransferSuccess from "../components/p2p-transfer/TransferSuccess";
 
 const P2PTransfer = () => {
   const [recipientWalletId, setRecipientWalletId] = useState("");
+  const [myWalletId, setMyWalletId] = useState<string | null>(null);
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
   const [saveContact, setSaveContact] = useState(false);
@@ -26,6 +27,21 @@ const P2PTransfer = () => {
   } | null>(null);
 
   const { success, error } = useToast();
+
+  // Fetch current user's wallet ID on mount
+  useEffect(() => {
+    const fetchMyWallet = async () => {
+      try {
+        const response = await walletApi.getWallet();
+        if (response.success) {
+          setMyWalletId(response.data.walletId);
+        }
+      } catch (err) {
+        console.error("Failed to fetch wallet info", err);
+      }
+    };
+    fetchMyWallet();
+  }, []);
 
   // Simulate debounced wallet ID search API call
   useEffect(() => {
@@ -65,12 +81,20 @@ const P2PTransfer = () => {
   const handleTransfer = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!recipientWalletId.trim()) {
+    const trimmedRecipientId = recipientWalletId.trim();
+    if (!trimmedRecipientId) {
       error("Recipient Wallet ID is required");
       return;
     }
 
+    // Validation: Prevent self-transfer
+    if (myWalletId && trimmedRecipientId === myWalletId) {
+      error("You cannot transfer money to your own wallet.");
+      return;
+    }
+
     const transferAmount = Number(amount);
+    // Validation: Prevent non-positive amount
     if (!transferAmount || transferAmount <= 0) {
       error("Please enter a valid amount greater than 0");
       return;
@@ -84,7 +108,7 @@ const P2PTransfer = () => {
     try {
       const response = await transactionApi.p2pTransfer(
         {
-          recipientWalletId: recipientWalletId.trim(),
+          recipientWalletId: trimmedRecipientId,
           amount: amountInPaise,
           description: description.trim(),
         },
@@ -99,17 +123,22 @@ const P2PTransfer = () => {
         if (response.data?.transactionId) {
           const tId = response.data.transactionId as any;
           // In P2P, the backend might return { debit_transaction, credit_transaction }
-          const extractedId = typeof tId === 'object' && tId !== null 
-            ? (tId.debit_transaction || tId.credit_transaction || JSON.stringify(tId)) 
-            : String(tId);
+          const extractedId =
+            typeof tId === "object" && tId !== null
+              ? tId.debit_transaction ||
+                tId.credit_transaction ||
+                JSON.stringify(tId)
+              : String(tId);
           setTransactionId(extractedId);
         } else {
-          setTransactionId("TXN-" + Date.now().toString().slice(-8).toUpperCase());
+          setTransactionId(
+            "TXN-" + Date.now().toString().slice(-8).toUpperCase(),
+          );
         }
 
         // In a real app, API call to save contact would go here if saveContact === true
         if (saveContact) {
-          success(`Saved ${recipientWalletId} to contacts!`);
+          success(`Saved ${trimmedRecipientId} to contacts!`);
         }
 
         // We do not clear state immediately so TransferSuccess has access to amount/recipientName,
