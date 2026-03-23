@@ -255,6 +255,46 @@ export interface P2PTransferRequest {
   description?: string;
 }
 
+export interface TransactionFilters {
+  walletId?: string;
+  type?: string;
+  flow?: string;
+  status?: string;
+  startDate?: string;
+  endDate?: string;
+  page?: number;
+  limit?: number;
+  sortBy?: string;
+  sortOrder?: "asc" | "desc";
+}
+
+export interface TransactionSummary {
+  totalTransactions: number;
+  credits: { count: number; total: string };
+  debits: { count: number; total: string };
+  onRamp: { count: number; total: string };
+  offRamp: { count: number; total: string };
+  p2p: {
+    received: { count: number; total: string };
+    sent: { count: number; total: string };
+  };
+}
+
+export interface TransactionQueryResponse {
+  transactions: any[];
+  pagination: {
+    currentPage: number;
+    totalPages: number;
+    totalCount: number;
+    limit: number;
+  };
+}
+
+export interface TransactionSummaryResponse {
+  summary: TransactionSummary;
+  recentTransactions: any[];
+}
+
 export const transactionApi = {
   addMoney: (data: TransactionRequest, idempotencyKey: string) =>
     apiRequest<TransactionResponse>("/api/transaction/add-money", {
@@ -280,4 +320,72 @@ export const transactionApi = {
       },
       body: JSON.stringify(data),
     }),
+
+  // Queries
+  getTransactions: (filters?: TransactionFilters) => {
+    const params = new URLSearchParams();
+    if (filters) {
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value !== undefined && value !== "") {
+          let finalValue = String(value);
+          if ((key === "startDate" || key === "endDate") && typeof value === "string") {
+            try {
+              const d = new Date(value);
+              if (!isNaN(d.getTime()) && value.length === 10) {
+                if (key === "endDate") {
+                  finalValue = new Date(`${value}T23:59:59.999Z`).toISOString();
+                } else {
+                  finalValue = new Date(`${value}T00:00:00.000Z`).toISOString();
+                }
+              }
+            } catch (e) {
+              // ignore
+            }
+          }
+          params.append(key, finalValue);
+        }
+      });
+    }
+    const queryString = params.toString() ? `?${params.toString()}` : "";
+    return apiRequest<ApiResponse<TransactionQueryResponse>>(
+      `/api/transaction/all${queryString}`,
+    );
+  },
+
+  getTransactionSummary: (filters?: {
+    startDate?: string;
+    endDate?: string;
+    walletId?: string;
+  }) => {
+    const params = new URLSearchParams();
+    if (filters) {
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value !== undefined && value !== "") {
+          let finalValue = String(value);
+          if ((key === "startDate" || key === "endDate") && typeof value === "string") {
+            try {
+              const d = new Date(value);
+              if (!isNaN(d.getTime()) && value.length === 10) {
+                if (key === "endDate") {
+                  finalValue = new Date(`${value}T23:59:59.999Z`).toISOString();
+                } else {
+                  finalValue = new Date(`${value}T00:00:00.000Z`).toISOString();
+                }
+              }
+            } catch (e) {
+              // ignore
+            }
+          }
+          params.append(key, finalValue);
+        }
+      });
+    }
+    const queryString = params.toString() ? `?${params.toString()}` : "";
+    return apiRequest<ApiResponse<TransactionSummaryResponse>>(
+      `/api/transaction/summary${queryString}`,
+    );
+  },
+
+  getTransactionById: (transactionId: string) =>
+    apiRequest<ApiResponse<any>>(`/api/transaction/${transactionId}`),
 };

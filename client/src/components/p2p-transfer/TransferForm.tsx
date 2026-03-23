@@ -1,6 +1,5 @@
 import React from "react";
 import { Search, UserCheck, FileText, Send, Loader2 } from "lucide-react";
-import { Input } from "../ui/input";
 
 interface TransferFormProps {
   recipientWalletId: string;
@@ -56,7 +55,7 @@ const TransferForm: React.FC<TransferFormProps> = ({
               <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                 <Search className="h-5 w-5 text-indigo-400 group-focus-within:text-indigo-600 transition-colors" />
               </div>
-              <Input
+              <input
                 type="text"
                 value={recipientWalletId}
                 onChange={(e) => setRecipientWalletId(e.target.value)}
@@ -95,10 +94,10 @@ const TransferForm: React.FC<TransferFormProps> = ({
                   ₹
                 </span>
               </div>
-              <Input
+              <input
                 type="text"
                 value={amount}
-                onChange={(e) => setAmount(String(e.target.value))}
+                onChange={(e) => setAmount(e.target.value)}
                 className="w-full pl-12 pr-4 py-5 bg-slate-50 border-2 border-slate-100 rounded-2xl text-3xl font-black text-slate-900 placeholder:text-slate-300 focus:outline-none focus:bg-white focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all"
                 placeholder="0.00"
                 required
