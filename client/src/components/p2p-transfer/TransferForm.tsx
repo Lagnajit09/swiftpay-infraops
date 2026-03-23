@@ -33,8 +33,8 @@ const TransferForm: React.FC<TransferFormProps> = ({
   return (
     <div className="bg-white rounded-3xl border border-slate-200/60 shadow-xl shadow-slate-200/40 relative overflow-hidden">
       {/* Decorative top border */}
-      <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500"></div>
-      
+      <div className="absolute top-0 left-0 right-0 h-1.5 bg-linear-to-r from-indigo-500 via-purple-500 to-pink-500"></div>
+
       <div className="p-6 sm:p-10 space-y-8">
         <form onSubmit={onSubmit} className="space-y-8">
           {/* Recipient Input & Lookup */}
@@ -50,7 +50,7 @@ const TransferForm: React.FC<TransferFormProps> = ({
                 </span>
               )}
             </div>
-            
+
             <div className="relative group">
               <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                 <Search className="h-5 w-5 text-indigo-400 group-focus-within:text-indigo-600 transition-colors" />
@@ -72,8 +72,12 @@ const TransferForm: React.FC<TransferFormProps> = ({
                   <UserCheck className="w-5 h-5" />
                 </div>
                 <div className="flex-1">
-                  <p className="text-sm font-bold text-slate-900">{resolvedUser.name}</p>
-                  <p className="text-xs font-medium text-indigo-600">SwiftPay Verified User</p>
+                  <p className="text-sm font-bold text-slate-900">
+                    {resolvedUser.name}
+                  </p>
+                  <p className="text-xs font-medium text-indigo-600">
+                    SwiftPay Verified User
+                  </p>
                 </div>
               </div>
             )}
@@ -86,7 +90,9 @@ const TransferForm: React.FC<TransferFormProps> = ({
             </label>
             <div className="relative group">
               <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                <span className="text-2xl font-light text-slate-400 group-focus-within:text-indigo-600 transition-colors">₹</span>
+                <span className="text-2xl font-light text-slate-400 group-focus-within:text-indigo-600 transition-colors">
+                  ₹
+                </span>
               </div>
               <input
                 type="number"
@@ -107,7 +113,9 @@ const TransferForm: React.FC<TransferFormProps> = ({
               <label className="text-xs font-bold text-slate-500 uppercase tracking-widest block">
                 What's this for?
               </label>
-              <span className="text-xs text-slate-400 font-medium bg-slate-100 px-2 py-0.5 rounded-md">Optional</span>
+              <span className="text-xs text-slate-400 font-medium bg-slate-100 px-2 py-0.5 rounded-md">
+                Optional
+              </span>
             </div>
             <div className="relative group">
               <div className="absolute inset-y-0 left-0 pl-4 pt-4 pointer-events-none">
@@ -121,26 +129,34 @@ const TransferForm: React.FC<TransferFormProps> = ({
               />
             </div>
           </div>
-          
+
           {/* Save Contact Toggle */}
-          <div 
-            className="flex items-center gap-3 p-4 border border-slate-200 rounded-xl bg-slate-50 hover:bg-slate-100/50 transition-colors cursor-pointer" 
+          <div
+            className="flex items-center gap-3 p-4 border border-slate-200 rounded-xl bg-slate-50 hover:bg-slate-100/50 transition-colors cursor-pointer"
             onClick={() => setSaveContact(!saveContact)}
           >
             <div className="relative flex items-center">
-              <input 
-                type="checkbox" 
-                className="peer sr-only" 
+              <input
+                type="checkbox"
+                className="peer sr-only"
                 checked={saveContact}
                 onChange={(e) => setSaveContact(e.target.checked)}
               />
-              <div className={`w-11 h-6 rounded-full transition-colors flex items-center px-1 ${saveContact ? 'bg-indigo-600' : 'bg-slate-300'}`}>
-                <div className={`w-4 h-4 rounded-full bg-white shadow-sm transition-transform ${saveContact ? 'translate-x-5' : 'translate-x-0'}`} />
+              <div
+                className={`w-11 h-6 rounded-full transition-colors flex items-center px-1 ${saveContact ? "bg-indigo-600" : "bg-slate-300"}`}
+              >
+                <div
+                  className={`w-4 h-4 rounded-full bg-white shadow-sm transition-transform ${saveContact ? "translate-x-5" : "translate-x-0"}`}
+                />
               </div>
             </div>
             <div>
-              <p className="text-sm font-bold text-slate-800">Save to My Contacts</p>
-              <p className="text-xs font-medium text-slate-500">Easily find them next time</p>
+              <p className="text-sm font-bold text-slate-800">
+                Save to My Contacts
+              </p>
+              <p className="text-xs font-medium text-slate-500">
+                Easily find them next time
+              </p>
             </div>
           </div>
 

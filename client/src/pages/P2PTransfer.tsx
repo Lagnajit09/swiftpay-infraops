@@ -2,7 +2,9 @@ import React, { useState, useEffect } from "react";
 import { ArrowRightLeft } from "lucide-react";
 import { transactionApi } from "../lib/api-client";
 import { useToast } from "../components/auth/ToastProvider";
-import QuickSendList, { MOCK_CONTACTS } from "../components/p2p-transfer/QuickSendList";
+import QuickSendList, {
+  MOCK_CONTACTS,
+} from "../components/p2p-transfer/QuickSendList";
 import TransferForm from "../components/p2p-transfer/TransferForm";
 import TransferSuccess from "../components/p2p-transfer/TransferSuccess";
 
@@ -11,13 +13,17 @@ const P2PTransfer = () => {
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
   const [saveContact, setSaveContact] = useState(false);
-  
+
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
-  
+  const [transactionId, setTransactionId] = useState("");
+
   // Simulated search state
   const [isSearching, setIsSearching] = useState(false);
-  const [resolvedUser, setResolvedUser] = useState<{name: string, isVerified: boolean} | null>(null);
+  const [resolvedUser, setResolvedUser] = useState<{
+    name: string;
+    isVerified: boolean;
+  } | null>(null);
 
   const { success, error } = useToast();
 
@@ -33,7 +39,9 @@ const P2PTransfer = () => {
     const timer = setTimeout(() => {
       setIsSearching(false);
       // Mock logic: check if it's a known contact
-      const contact = MOCK_CONTACTS.find(c => c.walletId === recipientWalletId);
+      const contact = MOCK_CONTACTS.find(
+        (c) => c.walletId === recipientWalletId,
+      );
       if (contact) {
         setResolvedUser({ name: contact.name, isVerified: true });
       } else {
@@ -56,12 +64,12 @@ const P2PTransfer = () => {
 
   const handleTransfer = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!recipientWalletId.trim()) {
       error("Recipient Wallet ID is required");
       return;
     }
-    
+
     const transferAmount = Number(amount);
     if (!transferAmount || transferAmount <= 0) {
       error("Please enter a valid amount greater than 0");
@@ -80,13 +88,25 @@ const P2PTransfer = () => {
           amount: amountInPaise,
           description: description.trim(),
         },
-        idempotencyKey
+        idempotencyKey,
       );
 
       if (response.success) {
         setIsSuccess(true);
         success("Transfer successful!");
-        
+
+        // Capture transaction ID if returned, else fallback to a timestamp mocked one
+        if (response.data?.transactionId) {
+          const tId = response.data.transactionId as any;
+          // In P2P, the backend might return { debit_transaction, credit_transaction }
+          const extractedId = typeof tId === 'object' && tId !== null 
+            ? (tId.debit_transaction || tId.credit_transaction || JSON.stringify(tId)) 
+            : String(tId);
+          setTransactionId(extractedId);
+        } else {
+          setTransactionId("TXN-" + Date.now().toString().slice(-8).toUpperCase());
+        }
+
         // In a real app, API call to save contact would go here if saveContact === true
         if (saveContact) {
           success(`Saved ${recipientWalletId} to contacts!`);
@@ -122,14 +142,17 @@ const P2PTransfer = () => {
     setDescription("");
     setSaveContact(false);
     setResolvedUser(null);
+    setTransactionId("");
   };
 
   if (isSuccess) {
     return (
-      <TransferSuccess 
-        amount={amount} 
-        recipientName={resolvedUser?.name || "Recipient"} 
-        onReset={handleReset} 
+      <TransferSuccess
+        amount={amount}
+        recipientName={resolvedUser?.name || "Recipient"}
+        transactionId={transactionId}
+        description={description}
+        onReset={handleReset}
       />
     );
   }
@@ -139,20 +162,21 @@ const P2PTransfer = () => {
       {/* Header */}
       <div>
         <h1 className="text-3xl font-black text-slate-900 flex items-center gap-3 tracking-tight">
-          <div className="bg-gradient-to-br from-indigo-500 to-purple-600 p-2.5 rounded-2xl text-white shadow-lg shadow-indigo-500/20">
+          <div className="bg-linear-to-br from-indigo-500 to-purple-600 p-2.5 rounded-2xl text-white shadow-lg shadow-indigo-500/20">
             <ArrowRightLeft className="w-6 h-6" />
           </div>
           P2P Transfer
         </h1>
         <p className="text-slate-500 mt-2 text-base max-w-2xl leading-relaxed">
-          Send money instantly to anyone using their SwiftPay Wallet ID. Zero fees, lightning fast settlements.
+          Send money instantly to anyone using their SwiftPay Wallet ID. Zero
+          fees, lightning fast settlements.
         </p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Left Column: Form */}
         <div className="lg:col-span-2 space-y-6">
-          <TransferForm 
+          <TransferForm
             recipientWalletId={recipientWalletId}
             setRecipientWalletId={setRecipientWalletId}
             amount={amount}

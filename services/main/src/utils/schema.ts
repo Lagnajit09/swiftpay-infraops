@@ -19,7 +19,7 @@ export const phoneSchema = z
   .string()
   .regex(
     /^\+[1-9]\d{1,14}$/,
-    "Invalid phone number format (must include country code)"
+    "Invalid phone number format (must include country code)",
   )
   .min(10, "Phone number must be at least 10 digits")
   .max(15, "Phone number cannot exceed 15 digits");
@@ -31,7 +31,7 @@ export const nameSchema = z
   .max(50, "Name cannot exceed 50 characters")
   .regex(
     /^[a-zA-Z\s'-]+$/,
-    "Name can only contain letters, spaces, hyphens, and apostrophes"
+    "Name can only contain letters, spaces, hyphens, and apostrophes",
   );
 
 // NEW: Signin validation schema
@@ -192,11 +192,11 @@ export const updateUserDetailsSchema = z.object({
         z.number(),
         z.boolean(),
         z.null(),
-      ])
+      ]),
     )
     .refine(
       (data) => Object.keys(data).length > 0,
-      "At least one field must be provided for update"
+      "At least one field must be provided for update",
     )
     .refine(
       (data) => {
@@ -210,14 +210,14 @@ export const updateUserDetailsSchema = z.object({
           "lastLoginAt",
         ];
         const hasRestrictedField = Object.keys(data).some((key) =>
-          restrictedFields.includes(key)
+          restrictedFields.includes(key),
         );
         return !hasRestrictedField;
       },
       {
         message:
           "Cannot update restricted fields: email, number, password, id, createdAt, lastLoginAt",
-      }
+      },
     ),
 });
 
@@ -254,7 +254,7 @@ export const p2pRequestSchema = z.object({
   body: z.object({
     amount: z.number().int().positive(), // amount in paise
     description: z.string().max(200).optional(),
-    recipientUserId: z.string().min(1),
+    recipientWalletId: z.string().min(1),
   }),
   headers: z
     .object({
