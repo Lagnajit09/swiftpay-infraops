@@ -270,6 +270,28 @@ paths:
                       createdAt:
                         type: string
                         format: date-time
+                      address:
+                        type: object
+                        properties:
+                          address:
+                            type: string
+                            example: 123 Main St
+                          city:
+                            type: string
+                            example: New York
+                          state:
+                            type: string
+                            example: NY
+                          country:
+                            type: string
+                            example: USA
+                          postalCode:
+                            type: string
+                            example: "10001"
+                      dob:
+                        type: string
+                        format: date
+                        example: "1990-01-01"
         "401":
           description: Unauthorized
 

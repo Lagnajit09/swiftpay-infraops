@@ -99,6 +99,21 @@ paths:
                           lastLoginAt:
                             type: string
                             format: date-time
+                          dob:
+                            type: string
+                            format: date
+                          address:
+                            type: object
+                            properties:
+                              address:
+                                type: string
+                                example: 123 Main St
+                              country:
+                                type: string
+                                example: USA
+                              state:
+                                type: string
+                                example: California
         "401":
           description: Unauthorized
           content:

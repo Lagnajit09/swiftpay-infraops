@@ -116,12 +116,12 @@ export const addressSchema = z
 export const countrySchema = z
   .string()
   .min(1, "Country is required")
-  .max(100, "Country must be less than 100 characters");
+  .max(20, "Country must be less than 20 characters");
 
 export const stateSchema = z
   .string()
   .min(1, "State is required")
-  .max(100, "State must be less than 100 characters");
+  .max(20, "State must be less than 20 characters");
 
 export const walletIDSchema = z
   .string()

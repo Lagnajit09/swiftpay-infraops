@@ -39,6 +39,10 @@ export const getUserProfile = async (req: Request, res: Response) => {
         role: true,
         createdAt: true,
         lastLoginAt: true,
+        address: true,
+        country: true,
+        state: true,
+        dob: true,
       },
     });
 
@@ -51,7 +55,24 @@ export const getUserProfile = async (req: Request, res: Response) => {
     }
 
     return successResponse(res, 200, "User profile retrieved successfully", {
-      user,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        number: user.number,
+        walletID: user.walletID,
+        emailVerified: user.emailVerified,
+        isActive: user.isActive,
+        role: user.role,
+        createdAt: user.createdAt,
+        lastLoginAt: user.lastLoginAt,
+        dob: user.dob,
+        address: {
+          address: user.address,
+          country: user.country,
+          state: user.state,
+        },
+      },
     });
   } catch (error: any) {
     await logInternalError("Get user profile error", error, req);
@@ -122,8 +143,8 @@ export const updateUserDetails = async (req: Request, res: Response) => {
           break;
 
         case "dob":
-          // Value is already a Date object from the schema transformation
-          updateData.dob = value as Date;
+          // Parse string to Date if it's not already
+          updateData.dob = new Date(value as string | Date);
           processedFields.push(key);
           break;
 
