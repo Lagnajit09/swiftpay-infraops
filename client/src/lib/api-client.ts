@@ -10,7 +10,7 @@ export interface ApiResponse<T = any> {
 }
 
 export interface User {
-  userId: string;
+  id: string;
   email: string;
   name?: string;
   number?: string;
@@ -328,7 +328,10 @@ export const transactionApi = {
       Object.entries(filters).forEach(([key, value]) => {
         if (value !== undefined && value !== "") {
           let finalValue = String(value);
-          if ((key === "startDate" || key === "endDate") && typeof value === "string") {
+          if (
+            (key === "startDate" || key === "endDate") &&
+            typeof value === "string"
+          ) {
             try {
               const d = new Date(value);
               if (!isNaN(d.getTime()) && value.length === 10) {
@@ -362,7 +365,10 @@ export const transactionApi = {
       Object.entries(filters).forEach(([key, value]) => {
         if (value !== undefined && value !== "") {
           let finalValue = String(value);
-          if ((key === "startDate" || key === "endDate") && typeof value === "string") {
+          if (
+            (key === "startDate" || key === "endDate") &&
+            typeof value === "string"
+          ) {
             try {
               const d = new Date(value);
               if (!isNaN(d.getTime()) && value.length === 10) {

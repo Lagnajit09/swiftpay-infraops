@@ -22,7 +22,7 @@ export const getUserProfile = async (req: Request, res: Response) => {
       return authErrorResponse(
         res,
         "Unauthorized: User info missing",
-        "User ID not found in request"
+        "User ID not found in request",
       );
     }
 
@@ -31,6 +31,7 @@ export const getUserProfile = async (req: Request, res: Response) => {
       select: {
         id: true,
         email: true,
+        name: true,
         number: true,
         walletID: true,
         emailVerified: true,
@@ -45,7 +46,7 @@ export const getUserProfile = async (req: Request, res: Response) => {
       return notFoundErrorResponse(
         res,
         "User not found",
-        "No user exists with the provided ID"
+        "No user exists with the provided ID",
       );
     }
 
@@ -59,7 +60,7 @@ export const getUserProfile = async (req: Request, res: Response) => {
       500,
       "Failed to fetch user profile",
       error,
-      ErrorType.INTERNAL_ERROR
+      ErrorType.INTERNAL_ERROR,
     );
   }
 };
@@ -87,7 +88,7 @@ export const updateUserDetails = async (req: Request, res: Response) => {
       return authErrorResponse(
         res,
         "Unauthorized: User info missing",
-        "User ID not found in request"
+        "User ID not found in request",
       );
     }
 
@@ -162,7 +163,7 @@ export const updateUserDetails = async (req: Request, res: Response) => {
       return notFoundErrorResponse(
         res,
         "User not found",
-        "No user exists with the provided ID"
+        "No user exists with the provided ID",
       );
     }
 
@@ -180,7 +181,7 @@ export const updateUserDetails = async (req: Request, res: Response) => {
       return authorizationErrorResponse(
         res,
         "Account is inactive",
-        "This account has been deactivated"
+        "This account has been deactivated",
       );
     }
 
@@ -220,7 +221,7 @@ export const updateUserDetails = async (req: Request, res: Response) => {
       metadata: {
         updatedFields: processedFields,
         sensitiveFieldsUpdated: processedFields.filter((field) =>
-          SENSITIVE_FIELDS.has(field)
+          SENSITIVE_FIELDS.has(field),
         ),
         totalFields: processedFields.length,
       },
@@ -238,7 +239,7 @@ export const updateUserDetails = async (req: Request, res: Response) => {
           rejectedFields: 0,
           validationErrors: 0,
         },
-      }
+      },
     );
   } catch (error: any) {
     await logInternalError("Update user details error", error, req, {
@@ -265,7 +266,7 @@ export const updateUserDetails = async (req: Request, res: Response) => {
       return notFoundErrorResponse(
         res,
         "User not found",
-        "The user record could not be found"
+        "The user record could not be found",
       );
     }
 
@@ -273,7 +274,7 @@ export const updateUserDetails = async (req: Request, res: Response) => {
       return conflictErrorResponse(
         res,
         "Unique constraint violation",
-        "The provided value already exists for a unique field"
+        "The provided value already exists for a unique field",
       );
     }
 
@@ -283,7 +284,7 @@ export const updateUserDetails = async (req: Request, res: Response) => {
       500,
       "Failed to update user details",
       error,
-      ErrorType.INTERNAL_ERROR
+      ErrorType.INTERNAL_ERROR,
     );
   }
 };

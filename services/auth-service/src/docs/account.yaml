@@ -72,6 +72,9 @@ paths:
                           id:
                             type: integer
                             example: 123
+                          name:
+                            type: string
+                            example: John Doe
                           email:
                             type: string
                             example: john@example.com
