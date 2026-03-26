@@ -13,7 +13,7 @@ interface AuthContextType {
   isLoading: boolean;
   login: (userData: User) => void;
   logout: () => Promise<void>;
-  checkAuth: () => Promise<void>;
+  checkAuth: (silent?: boolean) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -39,8 +39,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     }
   };
 
-  const checkAuth = async () => {
-    setIsLoading(true);
+  const checkAuth = async (silent: boolean = false) => {
+    if (!silent) setIsLoading(true);
     try {
       const response = await userApi.me();
       if (response.success && response.data?.user) {
@@ -51,7 +51,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     } catch (error) {
       setUser(null);
     } finally {
-      setIsLoading(false);
+      if (!silent) setIsLoading(false);
     }
   };
 

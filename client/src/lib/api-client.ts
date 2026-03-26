@@ -17,6 +17,13 @@ export interface User {
   emailVerified: boolean;
   role: string;
   walletID?: string;
+  address?: {
+    address?: string;
+    country?: string;
+    state?: string;
+  };
+  dob?: string;
+  createdAt?: string;
 }
 
 export interface Session {

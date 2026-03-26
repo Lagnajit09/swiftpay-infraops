@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../contexts/AuthContext";
-import { walletApi, type WalletData } from "../lib/api-client";
+import { walletApi, userApi, type WalletData } from "../lib/api-client";
 import { bankAccounts } from "../constants/account-data";
 import { motion } from "framer-motion";
+import { useToast } from "../components/auth/ToastProvider";
 import {
   User,
   Mail,
@@ -13,23 +14,61 @@ import {
   Copy,
   ExternalLink,
   Building2,
+  Save,
+  Edit2,
 } from "lucide-react";
 const generateAccountId = (email?: string, id?: string | number) => {
   if (!email || id === undefined) return "N/A";
   let hash = 0;
-  for (let i = 0; i < email.length; i++) {
+  for (let i = email.length - 1; i >= 0; i--) {
     hash = (hash << 5) - hash + email.charCodeAt(i);
     hash |= 0;
   }
   const hashStr = Math.abs(hash).toString(36).substring(0, 4).padEnd(4, "0");
-  const prefix = email.split("@")[0].replace(/[^a-zA-Z]/g, "").substring(0, 4).toLowerCase().padEnd(4, "x");
+  const prefix = email
+    .split("@")[0]
+    .replace(/[^a-zA-Z]/g, "")
+    .substring(0, 4)
+    .toLowerCase()
+    .padEnd(4, "x");
   return `${prefix}${hashStr}${id}`;
 };
 
 const Profile = () => {
-  const { user, logout } = useAuth();
+  const { user, logout, checkAuth } = useAuth();
+  const { success, error: showError } = useToast();
   const [copied, setCopied] = useState(false);
   const [wallet, setWallet] = useState<WalletData | null>(null);
+
+  const [isEditing, setIsEditing] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    name: user?.name || "",
+    number: user?.number || "",
+    address: user?.address?.address || "",
+    country: user?.address?.country || "",
+    state: user?.address?.state || "",
+    dob:
+      user?.dob && !isNaN(new Date(user.dob).getTime())
+        ? new Date(user.dob).toISOString().split("T")[0]
+        : "",
+  });
+
+  useEffect(() => {
+    if (user) {
+      setFormData({
+        name: user.name || "",
+        number: user.number || "",
+        address: user.address?.address || "",
+        country: user.address?.country || "",
+        state: user.address?.state || "",
+        dob:
+          user.dob && !isNaN(new Date(user.dob).getTime())
+            ? new Date(user.dob).toISOString().split("T")[0]
+            : "",
+      });
+    }
+  }, [user]);
 
   useEffect(() => {
     const fetchWallet = async () => {
@@ -46,6 +85,31 @@ const Profile = () => {
     };
     fetchWallet();
   }, [user]);
+
+  const handleSaveDetails = async () => {
+    setIsLoading(true);
+    try {
+      const payload = { ...formData };
+      delete (payload as any).name;
+      delete (payload as any).number;
+      if (!payload.dob) delete (payload as any).dob;
+      if (!payload.address) delete (payload as any).address;
+      if (!payload.state) delete (payload as any).state;
+      if (!payload.country) delete (payload as any).country;
+
+      const res = await userApi.updateUser(payload);
+      if (res.success) {
+        await checkAuth(true);
+        setIsEditing(false);
+        success("Profile updated successfully");
+      }
+    } catch (err: any) {
+      console.error("Failed to update profile", err);
+      showError(err.message || "Failed to update profile details");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleCopyWalletId = () => {
     if (user?.walletID) {
@@ -209,46 +273,242 @@ const Profile = () => {
                   </p>
                 </div>
               </div>
-              <button className="text-indigo-600 text-xs font-bold hover:underline underline-offset-4 bg-indigo-50 px-3 py-1.5 rounded-lg">
-                Edit Details
+              <button
+                onClick={() =>
+                  isEditing ? handleSaveDetails() : setIsEditing(true)
+                }
+                disabled={isLoading}
+                className="flex items-center gap-1.5 text-indigo-600 text-xs font-bold hover:bg-indigo-100 bg-indigo-50 px-4 py-2 rounded-lg transition-colors"
+              >
+                {isLoading ? (
+                  "Saving..."
+                ) : isEditing ? (
+                  <>
+                    <Save className="h-3.5 w-3.5" /> Save
+                  </>
+                ) : (
+                  <>
+                    <Edit2 className="h-3.5 w-3.5" /> Edit Details
+                  </>
+                )}
               </button>
             </div>
 
             <div className="p-7">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div>
-                  <p className="text-xs font-bold tracking-widest uppercase text-slate-400 mb-1">
-                    Full Name
-                  </p>
-                  <p className="text-base font-semibold text-slate-800">
-                    {displayName}
-                  </p>
+              {isEditing ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold tracking-widest uppercase text-slate-400">
+                      Full Name
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.name}
+                      disabled
+                      className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-500 cursor-not-allowed text-sm font-semibold"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold tracking-widest uppercase text-slate-400">
+                      Phone Number
+                    </label>
+                    <input
+                      type="tel"
+                      value={formData.number}
+                      disabled
+                      className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-500 cursor-not-allowed text-sm font-semibold"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold tracking-widest uppercase text-slate-400">
+                      Date of Birth
+                    </label>
+                    <input
+                      type="date"
+                      value={formData.dob}
+                      onChange={(e) =>
+                        setFormData({ ...formData, dob: e.target.value })
+                      }
+                      className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 text-sm font-semibold text-slate-800"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between items-center">
+                      <label className="text-xs font-bold tracking-widest uppercase text-slate-400">
+                        State / Region
+                      </label>
+                      <span className="text-[10px] text-slate-400 font-bold">{formData.state.length}/20</span>
+                    </div>
+                    <input
+                      type="text"
+                      value={formData.state}
+                      maxLength={20}
+                      onChange={(e) =>
+                        setFormData({ ...formData, state: e.target.value })
+                      }
+                      className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 text-sm font-semibold text-slate-800"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between items-center">
+                      <label className="text-xs font-bold tracking-widest uppercase text-slate-400">
+                        Country
+                      </label>
+                      <span className="text-[10px] text-slate-400 font-bold">{formData.country.length}/20</span>
+                    </div>
+                    <input
+                      type="text"
+                      value={formData.country}
+                      maxLength={20}
+                      onChange={(e) =>
+                        setFormData({ ...formData, country: e.target.value })
+                      }
+                      className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 text-sm font-semibold text-slate-800"
+                    />
+                  </div>
+                  <div className="space-y-1.5 md:col-span-2">
+                    <div className="flex justify-between items-center">
+                      <label className="text-xs font-bold tracking-widest uppercase text-slate-400">
+                        Address Details
+                      </label>
+                      <span className="text-[10px] text-slate-400 font-bold">{formData.address.length}/100</span>
+                    </div>
+                    <textarea
+                      value={formData.address}
+                      maxLength={100}
+                      onChange={(e) =>
+                        setFormData({ ...formData, address: e.target.value })
+                      }
+                      rows={2}
+                      className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 text-sm font-semibold text-slate-800 resize-none"
+                    ></textarea>
+                  </div>
+                  <div className="md:col-span-2 pt-6 mt-4 border-t border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div className="flex flex-col items-start">
+                      <p className="text-xs font-bold tracking-widest uppercase text-slate-400 mb-2">
+                        Account ID
+                      </p>
+                      <p className="text-xs font-semibold text-slate-800 font-mono break-all inline-flex bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200">
+                        {generateAccountId(user?.email, user?.id)}
+                      </p>
+                    </div>
+                    {user?.createdAt && (
+                      <div className="flex flex-col md:items-end">
+                        <p className="text-[10px] font-bold tracking-widest uppercase text-slate-400 mb-1">
+                          Joined On
+                        </p>
+                        <p className="text-sm font-bold text-slate-900 bg-indigo-50/50 px-3 py-1 rounded-lg border border-indigo-100/30">
+                          {new Date(user.createdAt).toLocaleDateString('en-US', { 
+                            month: 'long', 
+                            day: 'numeric', 
+                            year: 'numeric' 
+                          })}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                  <div className="md:col-span-2 flex justify-end">
+                    <button
+                      onClick={() => {
+                        setIsEditing(false);
+                        setFormData({
+                          name: user?.name || "",
+                          number: user?.number || "",
+                          address: user?.address?.address || "",
+                          country: user?.address?.country || "",
+                          state: user?.address?.state || "",
+                          dob:
+                            user?.dob && !isNaN(new Date(user.dob).getTime())
+                              ? new Date(user.dob).toISOString().split("T")[0]
+                              : "",
+                        });
+                      }}
+                      className="text-slate-500 text-sm font-bold hover:text-slate-700 px-4 py-2"
+                    >
+                      Cancel
+                    </button>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-xs font-bold tracking-widest uppercase text-slate-400 mb-1">
-                    Email Address
-                  </p>
-                  <p className="text-base font-semibold text-slate-800">
-                    {displayEmail}
-                  </p>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div>
+                    <p className="text-xs font-bold tracking-widest uppercase text-slate-400 mb-1">
+                      Full Name
+                    </p>
+                    <p className="text-base font-semibold text-slate-800">
+                      {displayName}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold tracking-widest uppercase text-slate-400 mb-1">
+                      Email Address
+                    </p>
+                    <p className="text-base font-semibold text-slate-800">
+                      {displayEmail}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold tracking-widest uppercase text-slate-400 mb-1">
+                      Phone Number
+                    </p>
+                    <p className="text-base font-semibold text-slate-800">
+                      {displayPhone}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold tracking-widest uppercase text-slate-400 mb-1">
+                      Date of Birth
+                    </p>
+                    <p className="text-base font-semibold text-slate-800">
+                      {user?.dob && !isNaN(new Date(user.dob).getTime())
+                        ? new Date(user.dob).toLocaleDateString()
+                        : "Not added"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold tracking-widest uppercase text-slate-400 mb-1">
+                      State / Country
+                    </p>
+                    <p className="text-base font-semibold text-slate-800 wrap-break-word line-clamp-2">
+                      {[user?.address?.state, user?.address?.country]
+                        .filter(Boolean)
+                        .join(", ") || "Not added"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold tracking-widest uppercase text-slate-400 mb-1">
+                      Address Details
+                    </p>
+                    <p className="text-base font-semibold text-slate-800 wrap-break-word whitespace-pre-wrap">
+                      {user?.address?.address || "Not added"}
+                    </p>
+                  </div>
+                  <div className="md:col-span-2 pt-6 mt-4 border-t border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div className="flex flex-col items-start">
+                      <p className="text-xs font-bold tracking-widest uppercase text-slate-400 mb-2">
+                        Account ID
+                      </p>
+                      <p className="text-xs font-semibold text-slate-800 font-mono break-all inline-flex bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200">
+                        {generateAccountId(user?.email, user?.id)}
+                      </p>
+                    </div>
+                    {user?.createdAt && (
+                      <div className="flex flex-col md:items-end">
+                        <p className="text-[10px] font-bold tracking-widest uppercase text-slate-400 mb-1">
+                          Joined On
+                        </p>
+                        <p className="text-sm font-bold text-slate-900 bg-indigo-50/50 px-3 py-1 rounded-lg border border-indigo-100/30">
+                          {new Date(user.createdAt).toLocaleDateString('en-US', { 
+                            month: 'long', 
+                            day: 'numeric', 
+                            year: 'numeric' 
+                          })}
+                        </p>
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <div>
-                  <p className="text-xs font-bold tracking-widest uppercase text-slate-400 mb-1">
-                    Phone Number
-                  </p>
-                  <p className="text-base font-semibold text-slate-800">
-                    {displayPhone}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs font-bold tracking-widest uppercase text-slate-400 mb-1">
-                    Account ID
-                  </p>
-                  <p className="text-xs font-semibold text-slate-800 font-mono break-all">
-                    {generateAccountId(user?.email, user?.id)}
-                  </p>
-                </div>
-              </div>
+              )}
             </div>
           </motion.div>
 
