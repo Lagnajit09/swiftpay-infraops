@@ -221,6 +221,12 @@ export const updateUserDetailsSchema = z.object({
     ),
 });
 
+export const updateEmailSchema = z.object({
+  body: z.object({
+    email: emailSchema,
+  }),
+});
+
 // ========================== WALLET RELATED ===========================
 
 // Header constants

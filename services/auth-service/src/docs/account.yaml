@@ -287,3 +287,153 @@ paths:
                       details:
                         type: string
                         example: This account has been deactivated
+  /api/auth/account/update-email:
+    post:
+      summary: Update user email
+      tags:
+        - Account
+      parameters:
+        - in: header
+          name: x-service-id
+          required: true
+          schema:
+            type: string
+          example: main-service
+        - in: header
+          name: x-service-secret
+          required: true
+          schema:
+            type: string
+        - in: header
+          name: x-user-id
+          required: true
+          schema:
+            type: integer
+          example: 123
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: new@example.com
+      responses:
+        "200":
+          description: Email updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Email updated successfully. Please verify your new email address.
+                  data:
+                    type: object
+                    properties:
+                      email:
+                        type: string
+                      emailVerified:
+                        type: boolean
+                        example: false
+        "400":
+          description: Invalid input
+        "409":
+          description: Email already in use
+
+  /api/auth/account/deactivate:
+    post:
+      summary: Deactivate account
+      tags:
+        - Account
+      parameters:
+        - in: header
+          name: x-service-id
+          required: true
+          schema:
+            type: string
+          example: main-service
+        - in: header
+          name: x-service-secret
+          required: true
+          schema:
+            type: string
+        - in: header
+          name: x-user-id
+          required: true
+          schema:
+            type: integer
+          example: 123
+      responses:
+        "200":
+          description: Account deactivated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Account deactivated successfully.
+                  data:
+                    type: object
+                    properties:
+                      deactivated:
+                        type: boolean
+                        example: true
+
+  /api/auth/account/delete:
+    post:
+      summary: Delete account (soft delete)
+      tags:
+        - Account
+      parameters:
+        - in: header
+          name: x-service-id
+          required: true
+          schema:
+            type: string
+          example: main-service
+        - in: header
+          name: x-service-secret
+          required: true
+          schema:
+            type: string
+        - in: header
+          name: x-user-id
+          required: true
+          schema:
+            type: integer
+          example: 123
+      responses:
+        "200":
+          description: Account deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Account permanently deleted.
+                  data:
+                    type: object
+                    properties:
+                      deleted:
+                        type: boolean
+                        example: true

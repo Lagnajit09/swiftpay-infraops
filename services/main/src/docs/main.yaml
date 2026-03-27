@@ -336,6 +336,106 @@ paths:
                         type: string
                       updated:
                         type: boolean
+  /api/user/update-email:
+    post:
+      summary: Update email address
+      tags:
+        - User
+      description: Update user email and trigger verification
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: user-new@example.com
+      responses:
+        "200":
+          description: Email updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Email updated successfully. Please verify your new email address.
+                  data:
+                    type: object
+                    properties:
+                      email:
+                        type: string
+                      emailVerified:
+                        type: boolean
+                        example: false
+
+  /api/user/deactivate:
+    post:
+      summary: Deactivate account
+      tags:
+        - User
+      description: Temporarily deactivate user account
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Account deactivated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Account deactivated successfully.
+                  data:
+                    type: object
+                    properties:
+                      deactivated:
+                        type: boolean
+                        example: true
+
+  /api/user/delete:
+    post:
+      summary: Delete account
+      tags:
+        - User
+      description: Permanently delete user account
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Account deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Account permanently deleted.
+                  data:
+                    type: object
+                    properties:
+                      deleted:
+                        type: boolean
                         example: true
 
   /api/wallet/health:

@@ -309,3 +309,276 @@ export const updateUserDetails = async (req: Request, res: Response) => {
     );
   }
 };
+
+export const updateEmail = async (req: Request, res: Response) => {
+  const userId = req.user?.id || req.headers["x-user-id"]?.toString();
+  const userEmail = req.user?.email;
+  const ipAddress = req.ip || req.socket?.remoteAddress;
+  const userAgent = req.get("User-Agent");
+
+  try {
+    if (!userId) {
+      return authErrorResponse(
+        res,
+        "Unauthorized: User info missing",
+        "User ID not found in request",
+      );
+    }
+
+    const { email } = req.body;
+
+    // Check user exists and is active
+    const existingUser = await prisma.user.findUnique({
+      where: { id: Number(userId) },
+      select: { id: true, email: true, isActive: true },
+    });
+
+    if (!existingUser) {
+      return notFoundErrorResponse(
+        res,
+        "User not found",
+        "No user exists with the provided ID",
+      );
+    }
+
+    if (!existingUser.isActive) {
+      return authorizationErrorResponse(
+        res,
+        "Account is inactive",
+        "This account has been deactivated",
+      );
+    }
+
+    // Check if another user already owns this email
+    const emailInUse = await prisma.user.findUnique({
+      where: { email },
+      select: { id: true },
+    });
+
+    if (emailInUse && emailInUse.id !== Number(userId)) {
+      return conflictErrorResponse(
+        res,
+        "Email already in use",
+        "Another account is registered with that email address",
+      );
+    }
+
+    // Mark email as unverified and update the email atomically
+    await prisma.user.update({
+      where: { id: Number(userId) },
+      data: { email, emailVerified: false },
+    });
+
+    await logSecurityEvent({
+      userId: userId.toString(),
+      email: existingUser.email,
+      eventType: "EMAIL_UPDATED",
+      success: true,
+      ipAddress,
+      userAgent,
+      metadata: { oldEmail: existingUser.email, newEmail: email },
+    });
+
+    return successResponse(
+      res,
+      200,
+      "Email updated successfully. Please verify your new email address.",
+      { email, emailVerified: false },
+    );
+  } catch (error: any) {
+    await logInternalError("Update email error", error, req, {
+      userId: userId?.toString(),
+    });
+
+    await logSecurityEvent({
+      userId: userId?.toString(),
+      email: userEmail,
+      eventType: "EMAIL_UPDATE_ERROR",
+      success: false,
+      ipAddress,
+      userAgent,
+      metadata: { error: error.message, code: error.code },
+    });
+
+    if (error?.code === "P2002") {
+      return conflictErrorResponse(
+        res,
+        "Email already in use",
+        "Another account is registered with that email address",
+      );
+    }
+
+    return errorResponse(
+      res,
+      500,
+      "Failed to update email",
+      error,
+      ErrorType.INTERNAL_ERROR,
+    );
+  }
+};
+
+export const deactivateAccount = async (req: Request, res: Response) => {
+  const userId = req.user?.id || req.headers["x-user-id"]?.toString();
+  const userEmail = req.user?.email;
+  const ipAddress = req.ip || req.socket?.remoteAddress;
+  const userAgent = req.get("User-Agent");
+
+  try {
+    if (!userId) {
+      return authErrorResponse(
+        res,
+        "Unauthorized: User info missing",
+        "User ID not found in request",
+      );
+    }
+
+    const existingUser = await prisma.user.findUnique({
+      where: { id: Number(userId) },
+      select: { id: true, email: true, isActive: true },
+    });
+
+    if (!existingUser) {
+      return notFoundErrorResponse(
+        res,
+        "User not found",
+        "No user exists with the provided ID",
+      );
+    }
+
+    if (!existingUser.isActive) {
+      return conflictErrorResponse(
+        res,
+        "Account already deactivated",
+        "This account is already inactive",
+      );
+    }
+
+    await prisma.user.update({
+      where: { id: Number(userId) },
+      data: { isActive: false },
+    });
+
+    await logSecurityEvent({
+      userId: userId.toString(),
+      email: existingUser.email,
+      eventType: "ACCOUNT_DEACTIVATED",
+      success: true,
+      ipAddress,
+      userAgent,
+      metadata: { action: "user_self_deactivation" },
+    });
+
+    return successResponse(
+      res,
+      200,
+      "Account deactivated successfully. You can reactivate it by signing back in.",
+      { deactivated: true },
+    );
+  } catch (error: any) {
+    await logInternalError("Deactivate account error", error, req, {
+      userId: userId?.toString(),
+    });
+
+    await logSecurityEvent({
+      userId: userId?.toString(),
+      email: userEmail,
+      eventType: "ACCOUNT_DEACTIVATION_ERROR",
+      success: false,
+      ipAddress,
+      userAgent,
+      metadata: { error: error.message, code: error.code },
+    });
+
+    return errorResponse(
+      res,
+      500,
+      "Failed to deactivate account",
+      error,
+      ErrorType.INTERNAL_ERROR,
+    );
+  }
+};
+
+export const deleteAccount = async (req: Request, res: Response) => {
+  const userId = req.user?.id || req.headers["x-user-id"]?.toString();
+  const userEmail = req.user?.email;
+  const ipAddress = req.ip || req.socket?.remoteAddress;
+  const userAgent = req.get("User-Agent");
+
+  try {
+    if (!userId) {
+      return authErrorResponse(
+        res,
+        "Unauthorized: User info missing",
+        "User ID not found in request",
+      );
+    }
+
+    const existingUser = await prisma.user.findUnique({
+      where: { id: Number(userId) },
+      select: { id: true, email: true, isActive: true, isDeleted: true },
+    });
+
+    if (!existingUser) {
+      return notFoundErrorResponse(
+        res,
+        "User not found",
+        "No user exists with the provided ID",
+      );
+    }
+
+    if (existingUser.isDeleted) {
+      return conflictErrorResponse(
+        res,
+        "Account already deleted",
+        "This account has already been permanently deleted",
+      );
+    }
+
+    // Soft delete: mark as deleted and deactivate
+    await prisma.user.update({
+      where: { id: Number(userId) },
+      data: { isDeleted: true, isActive: false },
+    });
+
+    await logSecurityEvent({
+      userId: userId.toString(),
+      email: existingUser.email,
+      eventType: "ACCOUNT_DELETED",
+      success: true,
+      ipAddress,
+      userAgent,
+      metadata: { action: "user_self_deletion" },
+    });
+
+    return successResponse(
+      res,
+      200,
+      "Account permanently deleted.",
+      { deleted: true },
+    );
+  } catch (error: any) {
+    await logInternalError("Delete account error", error, req, {
+      userId: userId?.toString(),
+    });
+
+    await logSecurityEvent({
+      userId: userId?.toString(),
+      email: userEmail,
+      eventType: "ACCOUNT_DELETION_ERROR",
+      success: false,
+      ipAddress,
+      userAgent,
+      metadata: { error: error.message, code: error.code },
+    });
+
+    return errorResponse(
+      res,
+      500,
+      "Failed to delete account",
+      error,
+      ErrorType.INTERNAL_ERROR,
+    );
+  }
+};
