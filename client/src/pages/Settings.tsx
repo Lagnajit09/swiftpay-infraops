@@ -14,11 +14,25 @@ import {
   LogOut,
 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
+import { authApi, userApi } from "../lib/api-client";
+import { useToast } from "../components/auth/ToastProvider";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 type TabId = "general" | "account" | "security" | "notifications";
 
 const Settings = () => {
-  const { user } = useAuth();
+  const { user, logout, checkAuth } = useAuth();
+  const { success, error: showError } = useToast();
   const [activeTab, setActiveTab] = useState<TabId>("general");
   const [isLoading, setIsLoading] = useState(false);
 
@@ -41,14 +55,100 @@ const Settings = () => {
   const [emailNotif, setEmailNotif] = useState(true);
   const [smsNotif, setSmsNotif] = useState(false);
 
-  // Handlers
-  const handleSave = (e: React.FormEvent | React.MouseEvent) => {
+  // --- Handlers ---
+
+  const handleUpdateEmail = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (email === user?.email) {
+      showError("Please enter a new email address");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      // Step 1: update email in DB (sets emailVerified=false)
+      const updateRes = await userApi.updateEmail(email);
+      if (updateRes.success) {
+        // Step 2: send a verification email to the new address
+        await authApi.requestEmailVerification();
+        // Refresh local user state to show Verify button immediately
+        await checkAuth(true);
+        success(
+          "Email updated. A verification link has been sent to your new address.",
+        );
+      }
+    } catch (err: any) {
+      showError(err.message || "Failed to update email");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newPassword !== confirmPassword) {
+      showError("Passwords do not match");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const res = await authApi.changePassword({
+        currentPassword,
+        newPassword,
+        confirmNewPassword: confirmPassword,
+      });
+      if (res.success) {
+        success("Password changed successfully");
+        setCurrentPassword("");
+        setNewPassword("");
+        setConfirmPassword("");
+      }
+    } catch (err: any) {
+      showError(err.message || "Failed to change password");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDeactivate = async () => {
+    setIsLoading(true);
+    try {
+      const res = await userApi.deactivateAccount();
+      if (res.success) {
+        success("Account deactivated successfully");
+        await logout();
+      }
+    } catch (err: any) {
+      showError(err.message || "Failed to deactivate account");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    setIsLoading(true);
+    try {
+      const res = await userApi.deleteAccount();
+      if (res.success) {
+        success("Account deleted permanently");
+        await logout();
+      }
+    } catch (err: any) {
+      showError(err.message || "Failed to delete account");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSaveNotifications = (e: React.MouseEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    // Placeholder for future notification API integration
     setTimeout(() => {
       setIsLoading(false);
-      // In a real app, toast success here & integrate API
-    }, 800);
+      success("Notification preferences updated");
+    }, 600);
   };
 
   const tabs = [
@@ -70,7 +170,6 @@ const Settings = () => {
       icon: ShieldCheck,
       description: "Passwords and authentication",
     },
-
     {
       id: "notifications",
       label: "Notifications",
@@ -118,7 +217,7 @@ const Settings = () => {
               }`}
             >
               <div
-                className={`p-2 rounded-xl flex-shrink-0 transition-colors ${
+                className={`p-2 rounded-xl shrink-0 transition-colors ${
                   activeTab === tab.id
                     ? "bg-indigo-100/50 text-indigo-600"
                     : "bg-slate-100 text-slate-500"
@@ -162,7 +261,7 @@ const Settings = () => {
                     </p>
                   </div>
 
-                  <form onSubmit={handleSave} className="space-y-6">
+                  <form onSubmit={handleUpdateEmail} className="space-y-6">
                     <div className="space-y-1.5">
                       <label className="text-xs font-bold tracking-widest uppercase text-slate-400">
                         Email Address
@@ -181,21 +280,48 @@ const Settings = () => {
                       </div>
                       <p className="text-xs text-slate-500 font-medium mt-2 flex items-center gap-1.5">
                         <AlertCircle className="h-3.5 w-3.5 text-amber-500" />
-                        Changing your email may require verification.
+                        Changing your email will require verification.
                       </p>
                     </div>
 
-                    <div className="pt-4 flex justify-end">
+                    <div className="pt-4 flex justify-end gap-3">
+                      {user && !user.emailVerified && (
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            setIsLoading(true);
+                            try {
+                              const res =
+                                await authApi.requestEmailVerification();
+                              if (res.success) {
+                                success(
+                                  "Verification email sent! Please check your inbox.",
+                                );
+                              }
+                            } catch (err: any) {
+                              showError(
+                                err.message || "Failed to resend verification",
+                              );
+                            } finally {
+                              setIsLoading(false);
+                            }
+                          }}
+                          disabled={isLoading}
+                          className="flex items-center gap-2 bg-amber-50 hover:bg-amber-100 text-amber-700 px-6 py-2.5 rounded-xl font-bold text-sm border border-amber-200 transition-colors disabled:opacity-70"
+                        >
+                          {isLoading ? "Sending..." : "Verify Email"}
+                        </button>
+                      )}
                       <button
                         type="submit"
                         disabled={isLoading}
                         className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-xl font-bold text-sm shadow-sm transition-colors disabled:opacity-70"
                       >
                         {isLoading ? (
-                          "Saving..."
+                          "Processing..."
                         ) : (
                           <>
-                            <Save className="h-4 w-4" /> Save Changes
+                            <Save className="h-4 w-4" /> Update Email
                           </>
                         )}
                       </button>
@@ -225,7 +351,7 @@ const Settings = () => {
                   <div className="space-y-6">
                     <div className="p-6 rounded-3xl border border-slate-200 bg-slate-50/50 flex flex-col md:flex-row md:items-center justify-between gap-6">
                       <div className="flex gap-4">
-                        <div className="bg-amber-100 text-amber-600 h-12 w-12 rounded-2xl flex items-center justify-center flex-shrink-0">
+                        <div className="bg-amber-100 text-amber-600 h-12 w-12 rounded-2xl flex items-center justify-center shrink-0">
                           <LogOut className="h-6 w-6" />
                         </div>
                         <div>
@@ -238,14 +364,41 @@ const Settings = () => {
                           </p>
                         </div>
                       </div>
-                      <button className="whitespace-nowrap px-6 py-2.5 rounded-xl bg-amber-50 text-amber-700 font-bold text-sm border border-amber-100 hover:bg-amber-100 transition-colors">
-                        Deactivate
-                      </button>
+                      <AlertDialog>
+                        <AlertDialogTrigger>
+                          <button
+                            disabled={isLoading}
+                            className="whitespace-nowrap px-6 py-2.5 rounded-xl bg-amber-50 text-amber-700 font-bold text-sm border border-amber-100 hover:bg-amber-100 transition-colors disabled:opacity-50"
+                          >
+                            Deactivate
+                          </button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>
+                              Deactivate Account?
+                            </AlertDialogTitle>
+                            <AlertDialogDescription>
+                              This will temporarily disable your account. You
+                              can reactivate it anytime by logging back in.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={handleDeactivate}
+                              className="bg-amber-600 hover:bg-amber-700"
+                            >
+                              Deactivate
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     </div>
 
                     <div className="p-6 rounded-3xl border border-red-100 bg-red-50/30 flex flex-col md:flex-row md:items-center justify-between gap-6">
                       <div className="flex gap-4">
-                        <div className="bg-red-100 text-red-600 h-12 w-12 rounded-2xl flex items-center justify-center flex-shrink-0">
+                        <div className="bg-red-100 text-red-600 h-12 w-12 rounded-2xl flex items-center justify-center shrink-0">
                           <Trash2 className="h-6 w-6" />
                         </div>
                         <div>
@@ -258,9 +411,36 @@ const Settings = () => {
                           </p>
                         </div>
                       </div>
-                      <button className="whitespace-nowrap px-6 py-2.5 rounded-xl bg-red-600 text-white font-bold text-sm shadow-sm hover:bg-red-700 transition-colors">
-                        Delete Permanently
-                      </button>
+                      <AlertDialog>
+                        <AlertDialogTrigger>
+                          <button
+                            disabled={isLoading}
+                            className="whitespace-nowrap px-6 py-2.5 rounded-xl bg-red-600 text-white font-bold text-sm shadow-sm hover:bg-red-700 transition-colors disabled:opacity-50"
+                          >
+                            Delete Permanently
+                          </button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent className="border-red-100">
+                          <AlertDialogHeader>
+                            <AlertDialogTitle className="text-red-900">
+                              Permanently Delete Account?
+                            </AlertDialogTitle>
+                            <AlertDialogDescription className="text-red-600/80">
+                              CRITICAL: This will permanently delete your
+                              account and all data. This action is irreversible.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={handleDelete}
+                              className="bg-red-600 hover:bg-red-700 border-none"
+                            >
+                              Delete Permanently
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     </div>
                   </div>
                 </motion.div>
@@ -284,7 +464,7 @@ const Settings = () => {
                     </p>
                   </div>
 
-                  <form onSubmit={handleSave} className="space-y-6">
+                  <form onSubmit={handleChangePassword} className="space-y-6">
                     <div className="space-y-1.5">
                       <label className="text-xs font-bold tracking-widest uppercase text-slate-400">
                         Current Password
@@ -422,7 +602,7 @@ const Settings = () => {
 
                     <div className="pt-4 flex justify-end">
                       <button
-                        onClick={handleSave}
+                        onClick={handleSaveNotifications}
                         disabled={isLoading}
                         className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-xl font-bold text-sm shadow-sm transition-colors disabled:opacity-70"
                       >

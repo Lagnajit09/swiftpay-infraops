@@ -81,6 +81,7 @@ export interface ResetPasswordRequest {
 export interface ChangePasswordRequest {
   currentPassword?: string;
   newPassword?: string;
+  confirmNewPassword?: string;
 }
 
 // --- Client Implementation ---
@@ -194,6 +195,19 @@ export const userApi = {
     apiRequest<ApiResponse<{ user: User }>>("/api/user/update-user", {
       method: "POST",
       body: JSON.stringify(data),
+    }),
+  updateEmail: (email: string) =>
+    apiRequest<ApiResponse<{ email: string; emailVerified: boolean }>>("/api/user/update-email", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    }),
+  deactivateAccount: () =>
+    apiRequest<ApiResponse<any>>("/api/user/deactivate", {
+      method: "POST",
+    }),
+  deleteAccount: () =>
+    apiRequest<ApiResponse<any>>("/api/user/delete", {
+      method: "POST",
     }),
 };
 
