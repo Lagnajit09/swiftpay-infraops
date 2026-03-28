@@ -1,7 +1,6 @@
 import {
   ArrowUpRight,
   ArrowDownRight,
-  Wallet,
   Activity,
   CreditCard,
   Plus,
