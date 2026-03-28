@@ -1411,3 +1411,87 @@ paths:
                       transactionId:
                         type: string
                         example: txn_pending_123
+  /api/transaction/dashboard-stats:
+    get:
+      summary: Get dashboard overview statistics
+      tags:
+        - Query
+      description: Get aggregated statistics (total spent, received, added, withdrawn) for a user
+      parameters:
+        - in: header
+          name: x-service-id
+          required: true
+          schema:
+            type: string
+        - in: header
+          name: x-service-secret
+          required: true
+          schema:
+            type: string
+        - in: header
+          name: x-user-id
+          required: true
+          schema:
+            type: integer
+        - in: query
+          name: walletId
+          schema:
+            type: string
+          description: Filter by wallet ID
+      responses:
+        "200":
+          description: Dashboard statistics retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Dashboard statistics retrieved successfully
+                  data:
+                    type: object
+                    properties:
+                      totalSpent:
+                        type: object
+                        properties:
+                          amount:
+                            type: string
+                            example: "15000"
+                          count:
+                            type: integer
+                      totalReceived:
+                        type: object
+                        properties:
+                          amount:
+                            type: string
+                            example: "25000"
+                          count:
+                            type: integer
+                      totalAdded:
+                        type: object
+                        properties:
+                          amount:
+                            type: string
+                            example: "50000"
+                          count:
+                            type: integer
+                      totalWithdrawn:
+                        type: object
+                        properties:
+                          amount:
+                            type: string
+                            example: "10000"
+                          count:
+                            type: integer
+                      recentTransactions:
+                        type: array
+                        items:
+                          type: object
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal service error

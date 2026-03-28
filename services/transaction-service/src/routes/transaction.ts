@@ -10,6 +10,7 @@ import {
   getPendingTransactions,
   getTransactionById,
   getTransactionSummary,
+  getDashboardStats,
   getWalletTransactions,
 } from "../controllers/transactionQuery";
 
@@ -41,6 +42,7 @@ router.post("/off-ramp", offRampTransaction);
 
 router.get("/all", getAllTransactions);
 router.get("/summary", getTransactionSummary);
+router.get("/dashboard-stats", getDashboardStats);
 router.get("/pending", getPendingTransactions);
 router.get("/wallet/:walletId", getWalletTransactions);
 router.get("/:transactionId", getTransactionById);

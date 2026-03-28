@@ -456,6 +456,134 @@ export async function getTransactionSummary(req: Request, res: Response) {
   }
 }
 
+// GET /api/txn/dashboard-stats - Get dashboard overview statistics
+export async function getDashboardStats(req: Request, res: Response) {
+  try {
+    const userId = req.user?.userId || req.headers["x-user-id"];
+
+    if (!userId) {
+      return authErrorResponse(
+        res,
+        "Unauthorized! UserID is missing.",
+        "User ID not found in request"
+      );
+    }
+
+    const { walletId } = req.query;
+
+    const where: any = {
+      userId: String(userId),
+      status: "SUCCESS",
+    };
+
+    if (walletId) where.walletId = walletId;
+
+    // Get aggregated statistics
+    const [
+      totalSpent,
+      totalReceived,
+      totalAdded,
+      totalWithdrawn,
+      recentTransactions,
+    ] = await Promise.all([
+      // Total Spent: All SUCCESS DEBIT transactions excluding OFFRAMP
+      prisma.transaction.aggregate({
+        where: {
+          ...where,
+          type: "DEBIT",
+          flow: { not: "OFFRAMP" },
+        },
+        _sum: { amount: true },
+        _count: true,
+      }),
+
+      // Total Received: All SUCCESS P2P CREDIT transactions
+      prisma.transaction.aggregate({
+        where: {
+          ...where,
+          type: "CREDIT",
+          flow: "P2P",
+        },
+        _sum: { amount: true },
+        _count: true,
+      }),
+
+      // Total Added: All SUCCESS ONRAMP transactions
+      prisma.transaction.aggregate({
+        where: {
+          ...where,
+          flow: "ONRAMP",
+        },
+        _sum: { amount: true },
+        _count: true,
+      }),
+
+      // Total Withdrawn: All SUCCESS OFFRAMP transactions
+      prisma.transaction.aggregate({
+        where: {
+          ...where,
+          flow: "OFFRAMP",
+        },
+        _sum: { amount: true },
+        _count: true,
+      }),
+
+      // 5 most recent transactions
+      prisma.transaction.findMany({
+        where: {
+          userId: String(userId),
+          ...(walletId ? { walletId: String(walletId) } : {}),
+        },
+        orderBy: { createdAt: "desc" },
+        take: 5,
+        include: {
+          paymentMethod: true,
+        },
+      }),
+    ]);
+
+    return successResponse(
+      res,
+      200,
+      "Dashboard statistics retrieved successfully",
+      {
+        totalSpent: {
+          amount: totalSpent._sum.amount?.toString() || "0",
+          count: totalSpent._count,
+        },
+        totalReceived: {
+          amount: totalReceived._sum.amount?.toString() || "0",
+          count: totalReceived._count,
+        },
+        totalAdded: {
+          amount: totalAdded._sum.amount?.toString() || "0",
+          count: totalAdded._count,
+        },
+        totalWithdrawn: {
+          amount: totalWithdrawn._sum.amount?.toString() || "0",
+          count: totalWithdrawn._count,
+        },
+        recentTransactions: recentTransactions.map((txn) => ({
+          ...txn,
+          amount: txn.amount.toString(),
+        })),
+      }
+    );
+  } catch (error: any) {
+    await logInternalError("Error fetching dashboard statistics", error, req, {
+      userId: req.user?.userId,
+    });
+
+    return errorResponse(
+      res,
+      500,
+      "Failed to fetch dashboard statistics",
+      error,
+      ErrorType.INTERNAL_ERROR
+    );
+  }
+}
+
 // GET /api/txn/pending - Get all pending transactions
 export async function getPendingTransactions(req: Request, res: Response) {
   try {

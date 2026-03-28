@@ -3,6 +3,7 @@ import authRouter from "./routes/auth";
 import userRouter from "./routes/user";
 import walletRouter from "./routes/wallet";
 import transactionRouter from "./routes/transaction";
+import dashboardRouter from "./routes/dashboard";
 import helmet from "helmet";
 import cookieParser from "cookie-parser";
 import dotenv from "dotenv";
@@ -81,6 +82,7 @@ app.use("/api/auth", authRouter);
 app.use("/api/user", userRouter);
 app.use("/api/wallet", walletRouter);
 app.use("/api/transaction", transactionRouter);
+app.use("/api/dashboard", dashboardRouter);
 
 // Error handling middleware (must be after all routes)
 app.use(
