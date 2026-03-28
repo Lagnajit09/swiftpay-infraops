@@ -416,3 +416,27 @@ export const transactionApi = {
   getTransactionById: (transactionId: string) =>
     apiRequest<ApiResponse<any>>(`/api/transaction/${transactionId}`),
 };
+
+export interface DashboardOverviewResponse {
+  balance: string;
+  currency: string;
+  walletStatus: string;
+  stats: {
+    totalSpent: string;
+    totalReceived: string;
+    totalAdded: string;
+    totalWithdrawn: string;
+    transactionCount: {
+      spent: number;
+      received: number;
+      added: number;
+      withdrawn: number;
+    };
+  };
+  recentTransactions: any[];
+}
+
+export const dashboardApi = {
+  getOverview: () =>
+    apiRequest<ApiResponse<DashboardOverviewResponse>>("/api/dashboard/overview"),
+};

@@ -10,26 +10,84 @@ import {
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useAuth } from "../contexts/AuthContext";
+import { useState, useEffect } from "react";
+import { dashboardApi } from "../lib/api-client";
+import type { DashboardOverviewResponse } from "../lib/api-client";
+import { Loader2, AlertCircle } from "lucide-react";
 
 export default function Dashboard() {
   const { user } = useAuth();
+  const [data, setData] = useState<DashboardOverviewResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
   const userName = user?.name || user?.email?.split("@")[0] || "User";
+
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        setLoading(true);
+        const response = await dashboardApi.getOverview();
+        if (response.success) {
+          setData(response.data);
+        } else {
+          setError(response.message || "Failed to fetch dashboard data");
+        }
+      } catch (err: any) {
+        setError(err.message || "An unexpected error occurred");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, []);
+
+  const formatCurrency = (amount: string | number) => {
+    const value = typeof amount === "string" ? parseFloat(amount) : amount;
+    return new Intl.NumberFormat("en-IN", {
+      style: "currency",
+      currency: "INR",
+      minimumFractionDigits: 2,
+    }).format(value / 100);
+  };
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+        <Loader2 className="w-10 h-10 text-indigo-600 animate-spin" />
+        <p className="text-slate-500 font-medium animate-pulse">
+          Loading your financial overview...
+        </p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 p-6 text-center">
+        <div className="w-16 h-16 bg-red-50 text-red-500 rounded-3xl flex items-center justify-center mb-2">
+          <AlertCircle className="w-8 h-8" />
+        </div>
+        <h2 className="text-xl font-bold text-slate-800">
+          Something went wrong
+        </h2>
+        <p className="text-slate-500 max-w-md">{error}</p>
+        <button
+          onClick={() => window.location.reload()}
+          className="mt-4 px-6 py-2 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 transition-colors"
+        >
+          Try Again
+        </button>
+      </div>
+    );
+  }
 
   const stats = [
     {
-      name: "Available Balance",
-      value: "$14,250.00",
-      change: "+4.75%",
-      changeType: "positive",
-      icon: Wallet,
-      color: "from-indigo-500 to-indigo-600",
-      bgColor: "bg-indigo-50",
-      textColor: "text-indigo-600",
-    },
-    {
       name: "Total Spent",
-      value: "$3,410.50",
-      change: "-1.2%",
+      value: formatCurrency(data?.stats.totalSpent || 0),
+      change: `${data?.stats.transactionCount.spent || 0} txns`,
       changeType: "negative",
       icon: CreditCard,
       color: "from-stone-700 to-stone-800",
@@ -38,54 +96,55 @@ export default function Dashboard() {
     },
     {
       name: "Total Received",
-      value: "$5,240.25",
-      change: "+8.2%",
+      value: formatCurrency(data?.stats.totalReceived || 0),
+      change: `${data?.stats.transactionCount.received || 0} txns`,
       changeType: "positive",
       icon: Activity,
       color: "from-emerald-500 to-emerald-600",
       bgColor: "bg-emerald-50",
       textColor: "text-emerald-600",
     },
+    {
+      name: "Total Added",
+      value: formatCurrency(data?.stats.totalAdded || 0),
+      change: `${data?.stats.transactionCount.added || 0} txns`,
+      changeType: "positive",
+      icon: Plus,
+      color: "from-blue-500 to-blue-600",
+      bgColor: "bg-blue-50",
+      textColor: "text-blue-600",
+    },
+    {
+      name: "Total Withdrawn",
+      value: formatCurrency(data?.stats.totalWithdrawn || 0),
+      change: `${data?.stats.transactionCount.withdrawn || 0} txns`,
+      changeType: "negative",
+      icon: ArrowUpRight,
+      color: "from-amber-500 to-amber-600",
+      bgColor: "bg-amber-50",
+      textColor: "text-amber-600",
+    },
   ];
 
-  const recentTransactions = [
-    {
-      id: 1,
-      name: "Amazon Purchases",
-      amount: "-$120.50",
-      date: "Today, 10:24 AM",
-      status: "Completed",
-      type: "debit",
-      category: "Shopping",
-    },
-    {
-      id: 2,
-      name: "Salary Deposit",
-      amount: "+$4,500.00",
-      date: "Yesterday, 09:00 AM",
-      status: "Completed",
-      type: "credit",
-      category: "Income",
-    },
-    {
-      id: 3,
-      name: "Coffee Shop",
-      amount: "-$4.50",
-      date: "Yesterday, 08:15 AM",
-      status: "Completed",
-      type: "debit",
-      category: "Food",
-    },
-    {
-      id: 4,
-      name: "Transfer to John",
-      amount: "-$50.00",
-      date: "Mar 11, 02:30 PM",
-      status: "Pending",
-      type: "debit",
-      category: "Transfer",
-    },
-  ];
+  const recentTransactions =
+    data?.recentTransactions.map((tx: any) => ({
+      id: tx.id,
+      name:
+        tx.description ||
+        (tx.type === "CREDIT" ? "Received Funds" : "Sent Funds"),
+      amount: `${tx.type === "CREDIT" ? "+" : "-"}${formatCurrency(tx.amount)}`,
+      date: new Date(tx.createdAt).toLocaleString("en-IN", {
+        day: "2-digit",
+        month: "short",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
+      }),
+      status:
+        tx.status.charAt(0).toUpperCase() + tx.status.slice(1).toLowerCase(),
+      type: tx.type.toLowerCase(),
+      category: tx.flow,
+    })) || [];
 
   return (
     <div className="space-y-10 pb-10">
@@ -117,7 +176,7 @@ export default function Dashboard() {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {stats.map((stat, index) => (
           <motion.div
             key={stat.name}
@@ -136,13 +195,17 @@ export default function Dashboard() {
                 className={`flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-full border ${
                   stat.changeType === "positive"
                     ? "bg-emerald-50 text-emerald-600 border-emerald-100/50"
-                    : "bg-red-50 text-red-600 border-red-100/50"
+                    : stat.changeType === "negative"
+                      ? "bg-red-50 text-red-600 border-red-100/50"
+                      : "bg-slate-50 text-slate-600 border-slate-100/50"
                 }`}
               >
                 {stat.changeType === "positive" ? (
                   <ArrowUpRight className="h-2.5 w-2.5" />
-                ) : (
+                ) : stat.changeType === "negative" ? (
                   <ArrowDownRight className="h-2.5 w-2.5" />
+                ) : (
+                  <Activity className="h-2.5 w-2.5" />
                 )}
                 {stat.change}
               </div>
@@ -219,9 +282,11 @@ export default function Dashboard() {
                   </p>
                   <span
                     className={`inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-widest mt-1 border ${
-                      tx.status === "Completed"
+                      tx.status === "Success" || tx.status === "Completed"
                         ? "bg-emerald-50 text-emerald-700 border-emerald-100/50"
-                        : "bg-amber-50 text-amber-700 border-amber-100/50"
+                        : tx.status === "Pending"
+                          ? "bg-amber-50 text-amber-700 border-amber-100/50"
+                          : "bg-red-50 text-red-700 border-red-100/50"
                     }`}
                   >
                     {tx.status}
