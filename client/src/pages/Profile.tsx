@@ -188,6 +188,12 @@ const Profile = () => {
             onLogout={logout}
             getInitials={getInitials}
           />
+          <WalletInfo
+            user={user}
+            wallet={wallet}
+            copied={copied}
+            onCopyWalletId={handleCopyWalletId}
+          />
           <SecurityStatus user={user} />
         </div>
 
@@ -207,14 +213,6 @@ const Profile = () => {
             displayPhone={displayPhone}
             generateAccountId={generateAccountId}
           />
-
-          <WalletInfo
-            user={user}
-            wallet={wallet}
-            copied={copied}
-            onCopyWalletId={handleCopyWalletId}
-          />
-
           <ConnectedAccounts />
         </div>
       </div>

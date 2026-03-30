@@ -197,10 +197,13 @@ export const userApi = {
       body: JSON.stringify(data),
     }),
   updateEmail: (email: string) =>
-    apiRequest<ApiResponse<{ email: string; emailVerified: boolean }>>("/api/user/update-email", {
-      method: "POST",
-      body: JSON.stringify({ email }),
-    }),
+    apiRequest<ApiResponse<{ email: string; emailVerified: boolean }>>(
+      "/api/user/update-email",
+      {
+        method: "POST",
+        body: JSON.stringify({ email }),
+      },
+    ),
   deactivateAccount: () =>
     apiRequest<ApiResponse<any>>("/api/user/deactivate", {
       method: "POST",
@@ -418,9 +421,6 @@ export const transactionApi = {
 };
 
 export interface DashboardOverviewResponse {
-  balance: string;
-  currency: string;
-  walletStatus: string;
   stats: {
     totalSpent: string;
     totalReceived: string;
@@ -438,5 +438,7 @@ export interface DashboardOverviewResponse {
 
 export const dashboardApi = {
   getOverview: () =>
-    apiRequest<ApiResponse<DashboardOverviewResponse>>("/api/dashboard/overview"),
+    apiRequest<ApiResponse<DashboardOverviewResponse>>(
+      "/api/dashboard/overview",
+    ),
 };
