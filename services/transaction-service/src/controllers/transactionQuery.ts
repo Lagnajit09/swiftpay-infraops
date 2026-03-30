@@ -20,7 +20,7 @@ export async function getAllTransactions(req: Request, res: Response) {
       return authErrorResponse(
         res,
         "Unauthorized! UserID is missing.",
-        "User ID not found in request"
+        "User ID not found in request",
       );
     }
 
@@ -99,7 +99,7 @@ export async function getAllTransactions(req: Request, res: Response) {
       500,
       "Failed to fetch transactions",
       error,
-      ErrorType.INTERNAL_ERROR
+      ErrorType.INTERNAL_ERROR,
     );
   }
 }
@@ -114,7 +114,7 @@ export async function getTransactionById(req: Request, res: Response) {
       return authErrorResponse(
         res,
         "Unauthorized! UserID is missing.",
-        "User ID not found in request"
+        "User ID not found in request",
       );
     }
 
@@ -135,7 +135,7 @@ export async function getTransactionById(req: Request, res: Response) {
         `No transaction found for transactionId: ${transactionId}`,
         {
           transactionId,
-        }
+        },
       );
     }
 
@@ -150,7 +150,7 @@ export async function getTransactionById(req: Request, res: Response) {
       try {
         const walletDetails = await getWalletDetails(
           transaction.walletId,
-          transaction.ledgerReferenceId
+          transaction.ledgerReferenceId,
         );
         if (walletDetails?.data?.ledgerEntry) {
           enrichedData.ledgerEntry = walletDetails.data.ledgerEntry;
@@ -164,7 +164,7 @@ export async function getTransactionById(req: Request, res: Response) {
     if (transaction.paymentReferenceId) {
       try {
         const paymentDetails = await getPaymentDetails(
-          transaction.paymentReferenceId
+          transaction.paymentReferenceId,
         );
         if (paymentDetails?.data) {
           enrichedData.paymentDetails = paymentDetails.data;
@@ -205,7 +205,7 @@ export async function getTransactionById(req: Request, res: Response) {
       res,
       200,
       "Transaction details retrieved successfully",
-      enrichedData
+      enrichedData,
     );
   } catch (error: any) {
     await logInternalError("Error fetching transaction details", error, req, {
@@ -217,7 +217,7 @@ export async function getTransactionById(req: Request, res: Response) {
       500,
       "Failed to fetch transaction details",
       error,
-      ErrorType.INTERNAL_ERROR
+      ErrorType.INTERNAL_ERROR,
     );
   }
 }
@@ -232,7 +232,7 @@ export async function getWalletTransactions(req: Request, res: Response) {
       return authErrorResponse(
         res,
         "Unauthorized! UserID is missing.",
-        "User ID not found in request"
+        "User ID not found in request",
       );
     }
 
@@ -297,7 +297,7 @@ export async function getWalletTransactions(req: Request, res: Response) {
           totalCount,
           limit: limitNum,
         },
-      }
+      },
     );
   } catch (error: any) {
     await logInternalError("Error fetching wallet transactions", error, req, {
@@ -309,7 +309,7 @@ export async function getWalletTransactions(req: Request, res: Response) {
       500,
       "Failed to fetch wallet transactions",
       error,
-      ErrorType.INTERNAL_ERROR
+      ErrorType.INTERNAL_ERROR,
     );
   }
 }
@@ -323,7 +323,7 @@ export async function getTransactionSummary(req: Request, res: Response) {
       return authErrorResponse(
         res,
         "Unauthorized! UserID is missing.",
-        "User ID not found in request"
+        "User ID not found in request",
       );
     }
 
@@ -439,7 +439,7 @@ export async function getTransactionSummary(req: Request, res: Response) {
           ...txn,
           amount: txn.amount.toString(),
         })),
-      }
+      },
     );
   } catch (error: any) {
     await logInternalError("Error fetching transaction summary", error, req, {
@@ -451,7 +451,7 @@ export async function getTransactionSummary(req: Request, res: Response) {
       500,
       "Failed to fetch transaction summary",
       error,
-      ErrorType.INTERNAL_ERROR
+      ErrorType.INTERNAL_ERROR,
     );
   }
 }
@@ -465,7 +465,7 @@ export async function getDashboardStats(req: Request, res: Response) {
       return authErrorResponse(
         res,
         "Unauthorized! UserID is missing.",
-        "User ID not found in request"
+        "User ID not found in request",
       );
     }
 
@@ -567,7 +567,7 @@ export async function getDashboardStats(req: Request, res: Response) {
           ...txn,
           amount: txn.amount.toString(),
         })),
-      }
+      },
     );
   } catch (error: any) {
     await logInternalError("Error fetching dashboard statistics", error, req, {
@@ -579,7 +579,7 @@ export async function getDashboardStats(req: Request, res: Response) {
       500,
       "Failed to fetch dashboard statistics",
       error,
-      ErrorType.INTERNAL_ERROR
+      ErrorType.INTERNAL_ERROR,
     );
   }
 }
@@ -593,7 +593,7 @@ export async function getPendingTransactions(req: Request, res: Response) {
       return authErrorResponse(
         res,
         "Unauthorized! UserID is missing.",
-        "User ID not found in request"
+        "User ID not found in request",
       );
     }
 
@@ -630,7 +630,7 @@ export async function getPendingTransactions(req: Request, res: Response) {
       {
         count: pendingTransactions.length,
         transactions: serializedTransactions,
-      }
+      },
     );
   } catch (error: any) {
     await logInternalError("Error fetching pending transactions", error, req, {
@@ -642,7 +642,7 @@ export async function getPendingTransactions(req: Request, res: Response) {
       500,
       "Failed to fetch pending transactions",
       error,
-      ErrorType.INTERNAL_ERROR
+      ErrorType.INTERNAL_ERROR,
     );
   }
 }
@@ -658,7 +658,7 @@ export async function cancelTransaction(req: Request, res: Response) {
       return authErrorResponse(
         res,
         "Unauthorized! UserID is missing.",
-        "User ID not found in request"
+        "User ID not found in request",
       );
     }
 
@@ -675,7 +675,7 @@ export async function cancelTransaction(req: Request, res: Response) {
         res,
         "Transaction not found or cannot be cancelled",
         `No transaction found or cannot be cancelled for transactionId: ${transactionId}`,
-        { transactionId }
+        { transactionId },
       );
     }
 
@@ -706,7 +706,7 @@ export async function cancelTransaction(req: Request, res: Response) {
       500,
       "Failed to cancel transaction",
       error,
-      ErrorType.INTERNAL_ERROR
+      ErrorType.INTERNAL_ERROR,
     );
   }
 }

@@ -13,8 +13,6 @@ import {
 
 const router = express.Router();
 
-const WALLET_SERVICE_URL =
-  process.env.WALLET_SERVICE_URL || "http://localhost:5002";
 const TRANSACTION_SERVICE_URL =
   process.env.TRANSACTION_SERVICE_URL || "http://localhost:5003";
 
@@ -41,28 +39,14 @@ router.get("/overview", requireAuth, async (req, res) => {
     };
 
     // Parallel calls to Wallet and Transaction services
-    const [walletRes, transactionRes] = (await Promise.allSettled([
-      axios.get(`${WALLET_SERVICE_URL}/api/wallet/get-or-create`, {
-        headers: internalHeaders,
-      }),
+    const [transactionRes] = (await Promise.allSettled([
       axios.get(`${TRANSACTION_SERVICE_URL}/api/transaction/dashboard-stats`, {
         headers: internalHeaders,
       }),
-    ])) as [PromiseSettledResult<any>, PromiseSettledResult<any>];
+    ])) as [PromiseSettledResult<any>];
 
     let walletData: any = null;
     let transactionData: any = null;
-
-    if (walletRes.status === "fulfilled") {
-      walletData = walletRes.value.data.data;
-    } else {
-      console.error("Wallet service call failed:", walletRes.reason.message);
-      await logExternalServiceError(
-        "Wallet service unavailable for overview",
-        walletRes.reason,
-        req,
-      );
-    }
 
     if (transactionRes.status === "fulfilled") {
       transactionData = transactionRes.value.data.data;
@@ -80,9 +64,6 @@ router.get("/overview", requireAuth, async (req, res) => {
 
     // Combine response
     const dashboardData = {
-      balance: walletData?.balance || "0",
-      currency: walletData?.currency || "INR",
-      walletStatus: walletData?.status || "ACTIVE",
       stats: {
         totalSpent: transactionData?.totalSpent?.amount || "0",
         totalReceived: transactionData?.totalReceived?.amount || "0",
