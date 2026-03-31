@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { Mail, Loader2, ArrowRight, ArrowLeft } from "lucide-react";
 import { useToast } from "./ToastProvider";
 import { motion } from "framer-motion";
+import { authApi } from "../../lib/api-client";
 
 const ForgotPasswordForm = () => {
   const [email, setEmail] = useState("");
@@ -30,11 +31,14 @@ const ForgotPasswordForm = () => {
     setIsLoading(true);
 
     try {
-      // Simulate API call for sending reset link
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      const response = await authApi.requestPasswordReset(email);
 
-      success("Password reset link sent!");
-      setIsSubmitted(true);
+      if (response.success) {
+        success("Password reset link sent!");
+        setIsSubmitted(true);
+      } else {
+        error(response.message || "Failed to send reset link. Please try again.");
+      }
     } catch (err: any) {
       error(err.message || "Failed to send reset link. Please try again.");
     } finally {

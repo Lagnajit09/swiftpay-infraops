@@ -1,9 +1,4 @@
-import {
-  ArrowUpRight,
-  Activity,
-  CreditCard,
-  Plus,
-} from "lucide-react";
+import { ArrowUpRight, CreditCard, Plus, ArrowDownLeft } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { useState, useEffect } from "react";
 import { dashboardApi } from "../lib/api-client";
@@ -103,7 +98,7 @@ export default function Dashboard() {
       value: formatCurrency(data?.stats.totalReceived || 0),
       change: `${data?.stats.transactionCount.received || 0} txns`,
       changeType: "positive",
-      icon: Activity,
+      icon: ArrowDownLeft,
       bgColor: "bg-emerald-50",
       textColor: "text-emerald-600",
     },
