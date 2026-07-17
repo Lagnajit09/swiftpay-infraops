@@ -59,6 +59,7 @@ RUN npm ci --only=production && npm cache clean --force
 COPY --from=builder --chown=walletservice:nodejs /app/dist ./dist
 COPY --from=builder --chown=walletservice:nodejs /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder --chown=walletservice:nodejs /app/prisma ./prisma
+COPY --from=builder --chown=walletservice:nodejs /app/prisma.config.ts ./
 
 # Copy example environment file
 COPY --chown=walletservice:nodejs .env.example ./

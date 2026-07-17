@@ -59,6 +59,8 @@ RUN npm ci --only=production && npm cache clean --force
 COPY --from=builder --chown=authservice:nodejs /app/dist ./dist
 COPY --from=builder --chown=authservice:nodejs /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder --chown=authservice:nodejs /app/prisma ./prisma
+# prisma.config.ts is read by the Prisma CLI for datasource URL at migrate time
+COPY --from=builder --chown=authservice:nodejs /app/prisma.config.ts ./
 
 # Copy example environment file
 COPY --chown=authservice:nodejs .env.example ./

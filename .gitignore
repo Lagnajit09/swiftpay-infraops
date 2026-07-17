@@ -1,0 +1,4 @@
+.agents
+.graphifyignore
+graphify-out/
+k8s/secrets
