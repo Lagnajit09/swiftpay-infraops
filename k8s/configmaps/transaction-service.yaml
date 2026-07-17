@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: transaction-service-config
+  namespace: swiftpay
+data:
+  NODE_ENV: "production"
+  PORT: "5003"
+  FRONTEND_URL: "http://localhost:3000"
+  # transaction-service calls wallet-service and payment-service directly (S2S)
+  # These resolve via K8s DNS to the ClusterIP Services we define
+  WALLET_SERVICE_URL: "http://wallet-service:5002"
+  PAYMENT_SERVICE_URL: "http://payment-service:5004"

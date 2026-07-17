@@ -1,0 +1,29 @@
+# A PersistentVolumeClaim (PVC) is a REQUEST for storage.
+#
+# Think of it like this:
+#   PersistentVolume (PV)  = the actual disk/storage (managed by the cluster)
+#   PersistentVolumeClaim  = your app saying "I need 2GB of storage please"
+#
+# In a cloud cluster (AWS, GCP, Civo), submitting a PVC automatically
+# provisions a real cloud disk (EBS, GCE PD, etc.) — that's StorageClass magic.
+#
+# In k3d locally, it uses the "local-path" provisioner which creates a
+# directory on the node's filesystem. Same API, different backend.
+#
+# accessModes:
+#   ReadWriteOnce  = mounted by ONE node at a time (standard for databases)
+#   ReadOnlyMany   = many nodes can read (not relevant here)
+#   ReadWriteMany  = many nodes can read+write (needs special storage like NFS)
+#
+# PostgreSQL always uses ReadWriteOnce — only one postgres pod writes to disk.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-pvc
+  namespace: swiftpay
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi

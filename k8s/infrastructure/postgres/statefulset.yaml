@@ -1,0 +1,91 @@
+# WHY StatefulSet and NOT Deployment for PostgreSQL?
+#
+# A Deployment treats all its pods as interchangeable cattle — they can be
+# killed, rescheduled anywhere, and get a new name + IP every restart. That
+# is fine for stateless apps like your Node services.
+#
+# A database is NOT interchangeable:
+#   - Its data must survive pod restarts (needs stable storage)
+#   - Its hostname should be predictable (postgres-0, not a random hash)
+#   - Replicas (if any) have specific roles: one is primary, others are replicas
+#
+# StatefulSet gives you:
+#   1. Stable pod names: postgres-0, postgres-1, ... (never changes)
+#   2. Stable DNS: postgres-0.postgres.swiftpay.svc.cluster.local
+#   3. Ordered startup/shutdown (important for replica sets)
+#   4. Each pod gets its OWN PVC (sticky storage that follows the pod)
+#
+# We only run 1 replica here (production-grade HA Postgres needs more work),
+# but using StatefulSet over Deployment is still the correct pattern.
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+  namespace: swiftpay
+spec:
+  serviceName: postgres          # must match the headless Service name below
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:15-alpine
+          ports:
+            - containerPort: 5432
+          env:
+            # We use individual env keys from the Secret, not envFrom, because
+            # the postgres image expects these SPECIFIC variable names.
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: POSTGRES_DB
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: POSTGRES_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: POSTGRES_PASSWORD
+            # Store data under /var/lib/postgresql/data/pgdata to avoid a
+            # known postgres-on-k8s issue where postgres refuses to start if
+            # the mount point itself is the data directory.
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          volumeMounts:
+            - name: postgres-storage
+              mountPath: /var/lib/postgresql/data
+          # Readiness: only send traffic once postgres is fully accepting connections.
+          # pg_isready checks the socket — faster and more reliable than a query.
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "postgres", "-d", "swiftpaydb"]
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-U", "postgres", "-d", "swiftpaydb"]
+            initialDelaySeconds: 30
+            periodSeconds: 15
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+      volumes:
+        # Reference the standalone PVC we created. The pod mounts it at
+        # /var/lib/postgresql/data — this directory persists across pod restarts.
+        - name: postgres-storage
+          persistentVolumeClaim:
+            claimName: postgres-pvc

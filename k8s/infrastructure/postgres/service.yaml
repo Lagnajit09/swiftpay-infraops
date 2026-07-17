@@ -1,0 +1,21 @@
+# The Service for postgres gives app pods a stable hostname to connect to.
+# All four app services will use:
+#   DATABASE_URL=postgresql://postgres:pass@postgres:5432/swiftpaydb?schema=...
+# The hostname "postgres" here resolves to this Service's ClusterIP.
+#
+# Note: for StatefulSets, Kubernetes also supports "headless" Services
+# (clusterIP: None) which give each pod its own DNS entry (postgres-0.postgres).
+# That matters for database clusters where the app needs to talk to a specific
+# replica. For our single-replica setup, a regular ClusterIP Service is enough.
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: swiftpay
+spec:
+  type: ClusterIP
+  selector:
+    app: postgres
+  ports:
+    - port: 5432
+      targetPort: 5432

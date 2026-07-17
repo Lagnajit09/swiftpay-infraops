@@ -1,0 +1,20 @@
+# Pods are ephemeral — they come and go, each with a different IP. A Service
+# gives them ONE stable name and virtual IP. Other pods reach main-service just
+# by using the hostname "main-service" (K8s DNS resolves it), no matter which
+# Pod or node is actually serving.
+#
+# Type ClusterIP (the default) means this is reachable only INSIDE the cluster.
+# That's what we want for now — we'll reach it from our laptop via
+# `kubectl port-forward`. External access comes later with Ingress (Phase 4).
+apiVersion: v1
+kind: Service
+metadata:
+  name: main-service
+  namespace: swiftpay
+spec:
+  type: ClusterIP
+  selector:
+    app: main-service      # routes traffic to any Pod carrying this label
+  ports:
+    - port: 5000           # the port the Service listens on
+      targetPort: 5000     # the container port it forwards to

@@ -1,0 +1,15 @@
+# auth-service connects using: REDIS_URL=redis://redis:6379
+# The hostname "redis" here resolves to this Service's ClusterIP.
+# No other service needs Redis — only auth-service.
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+  namespace: swiftpay
+spec:
+  type: ClusterIP
+  selector:
+    app: redis
+  ports:
+    - port: 6379
+      targetPort: 6379

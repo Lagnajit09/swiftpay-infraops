@@ -1,0 +1,134 @@
+# CI/CD Pipeline — SwiftPay Microservices
+#
+# Triggers on every push to main and on pull requests targeting main.
+# Two jobs run in parallel:
+#   1. lint-and-validate — fast checks (no Docker needed): manifest validation
+#      and a dry-run kubectl apply to catch YAML errors early.
+#   2. build-and-push — builds all 5 Docker images and pushes them to GHCR.
+#      Only runs on push to main (not on PRs, since PRs don't have push access
+#      to the registry).
+#
+# Images are tagged with both the git SHA (immutable, for traceability) and
+# "latest" (mutable, for convenience). The SHA tag is what you'd pin in a
+# real production deploy.
+#
+# GHCR (GitHub Container Registry) is free for public repos and requires no
+# external accounts — it uses GITHUB_TOKEN which Actions provides automatically.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  REGISTRY: ghcr.io
+  # github.repository is "owner/repo-name" — used as the image namespace
+  IMAGE_PREFIX: ghcr.io/${{ github.repository_owner }}/swiftpay
+
+jobs:
+  # ─────────────────────────────────────────────
+  # JOB 1: Validate Kubernetes manifests
+  # Fast, no Docker required. Catches YAML typos
+  # and invalid field names before any build runs.
+  # ─────────────────────────────────────────────
+  lint-and-validate:
+    name: Validate K8s Manifests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v4
+
+      - name: Dry-run apply all manifests
+        # --dry-run=client validates YAML structure and field names locally
+        # without connecting to a real cluster.
+        # We apply in order: namespace first, then everything else.
+        run: |
+          kubectl apply -f k8s/namespace.yaml --dry-run=client
+          kubectl apply -f k8s/configmaps/ --dry-run=client
+          # k8s/secrets/ is gitignored (never commit real credentials)
+          # Secret manifests are applied manually or via a secrets manager in production
+          kubectl apply -f k8s/infrastructure/postgres/ --dry-run=client
+          kubectl apply -f k8s/infrastructure/redis/ --dry-run=client
+          kubectl apply -f k8s/services/main-service/ --dry-run=client
+          kubectl apply -f k8s/services/auth-service/ --dry-run=client
+          kubectl apply -f k8s/services/wallet-service/ --dry-run=client
+          kubectl apply -f k8s/services/transaction-service/ --dry-run=client
+          kubectl apply -f k8s/services/payment-service/ --dry-run=client
+          kubectl apply -f k8s/ingress/ --dry-run=client
+
+  # ─────────────────────────────────────────────
+  # JOB 2: Build and push Docker images to GHCR
+  # Only runs on push to main (not PRs).
+  # Builds all 5 images in parallel using a matrix.
+  # ─────────────────────────────────────────────
+  build-and-push:
+    name: Build & Push — ${{ matrix.service }}
+    runs-on: ubuntu-latest
+    # Skip this job on pull requests — only push to registry from main
+    if: github.event_name == 'push'
+
+    permissions:
+      contents: read
+      packages: write  # required to push to GHCR
+
+    strategy:
+      # Build all 5 services in parallel. If one fails, others continue.
+      fail-fast: false
+      matrix:
+        include:
+          - service: main-service
+            context: services/main
+          - service: auth-service
+            context: services/auth-service
+          - service: wallet-service
+            context: services/wallet-service
+          - service: transaction-service
+            context: services/transaction-service
+          - service: payment-service
+            context: services/payment-service
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Extracts metadata to generate image tags automatically:
+      #   - ghcr.io/owner/swiftpay-main-service:sha-abc1234  (immutable)
+      #   - ghcr.io/owner/swiftpay-main-service:latest       (mutable)
+      - name: Extract image metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_PREFIX }}-${{ matrix.service }}
+          tags: |
+            type=sha,prefix=sha-,format=short
+            type=raw,value=latest
+
+      # BuildKit cache speeds up repeated builds significantly.
+      # gha (GitHub Actions cache) stores layer cache between runs.
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push ${{ matrix.service }}
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          target: production
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,scope=${{ matrix.service }},mode=max

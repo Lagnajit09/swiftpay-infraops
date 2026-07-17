@@ -1,0 +1,33 @@
+# INGRESS — the traffic routing rulebook for the cluster.
+#
+# An Ingress object is NOT a pod. It's a set of rules that the
+# NGINX Ingress Controller reads and uses to configure itself.
+# The controller is the actual pod doing the routing work.
+#
+# Traffic flow:
+#   browser → localhost:8088/api/... (k3d load balancer)
+#             → ingress-nginx-controller pod (reads this file's rules)
+#             → main-service:5000/api/... (your BFF, path forwarded as-is)
+#
+# Why no path rewrite? main-service mounts all routes under /api/
+# (e.g. app.use("/api/auth", authRouter)), so the full path must be
+# preserved. External traffic never needs to reach other services directly.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: swiftpay-ingress
+  namespace: swiftpay
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+spec:
+  ingressClassName: nginx
+  rules:
+    - http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: main-service
+                port:
+                  number: 5000

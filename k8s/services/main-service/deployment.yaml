@@ -1,0 +1,57 @@
+# A Deployment describes the DESIRED STATE for a stateless app: which image to
+# run, how many copies (replicas), and how to update them. Kubernetes constantly
+# works to make reality match this spec — if a Pod dies, it starts a new one.
+#
+# Deployment -> manages a ReplicaSet -> manages Pods. You edit the Deployment;
+# the layers below are handled for you.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: main-service
+  namespace: swiftpay
+spec:
+  replicas: 1                      # run a single copy for now
+  selector:
+    matchLabels:
+      app: main-service            # this Deployment owns Pods with this label
+  template:                        # the Pod "cookie cutter" used for each replica
+    metadata:
+      labels:
+        app: main-service          # Pods get this label; the Service finds them by it
+    spec:
+      containers:
+        - name: main-service
+          image: swiftpay-main:local      # the image we build & import into k3d
+          imagePullPolicy: IfNotPresent   # use the local image; don't try a registry
+          ports:
+            - containerPort: 5000
+          envFrom:
+            - configMapRef:
+                name: main-service-config   # inject all ConfigMap keys as env vars
+            - secretRef:
+                name: main-service-secret   # inject all Secret keys as env vars
+          # Liveness probe: "is the app still alive?" If this fails repeatedly,
+          # Kubernetes RESTARTS the container. We hit "/" which returns healthy JSON.
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 5000
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          # Readiness probe: "is the app ready to receive traffic?" While this
+          # fails, the Pod is kept OUT of the Service's load-balancing pool.
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 5000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          # Resource hints: requests = guaranteed reservation (used for scheduling);
+          # limits = hard ceiling (container is throttled/killed if it exceeds memory).
+          resources:
+            requests:
+              cpu: "50m"           # 50 millicores = 0.05 of a CPU
+              memory: "64Mi"
+            limits:
+              cpu: "250m"
+              memory: "256Mi"

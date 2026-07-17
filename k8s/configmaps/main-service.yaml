@@ -1,0 +1,23 @@
+# A ConfigMap holds NON-secret configuration as plain key/value pairs.
+# Think of it as the ".env file" for non-sensitive values, stored in the cluster.
+#
+# We inject every key here into the container as an environment variable
+# (see the Deployment's `envFrom.configMapRef`). Changing a value here and
+# re-applying updates the config without rebuilding the image.
+#
+# The service DNS names below (auth-service, wallet-service, ...) don't exist
+# yet — we add those services in Phases 2-3. main-service only checks that the
+# vars are SET at boot; it won't crash just because the targets are unreachable.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: main-service-config
+  namespace: swiftpay
+data:
+  NODE_ENV: "production"
+  PORT: "5000"
+  AUTH_SERVICE_URL: "http://auth-service:5001"
+  WALLET_SERVICE_URL: "http://wallet-service:5002"
+  TRANSACTION_SERVICE_URL: "http://transaction-service:5003"
+  PAYMENT_SERVICE_URL: "http://payment-service:5004"
+  FRONTEND_URL: "http://localhost:3000"

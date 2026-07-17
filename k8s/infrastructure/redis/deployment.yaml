@@ -1,0 +1,53 @@
+# WHY Deployment (not StatefulSet) for Redis?
+#
+# Redis in this project is a SESSION STORE — auth-service uses it to hold
+# refresh tokens and session data (see REDIS_URL in auth-service's env vars).
+#
+# Sessions are ephemeral by design: if Redis restarts, users get logged out
+# and re-authenticate. That's acceptable. We do NOT need:
+#   - Stable pod identity (sessions don't care which redis-0 they hit)
+#   - Complex replication (we're not running a Redis Cluster here)
+#
+# A Deployment is therefore correct here. If you later wanted Redis Sentinel
+# or Redis Cluster for HA, you'd switch to a StatefulSet.
+#
+# No PVC either — if the pod restarts, losing in-memory sessions is fine.
+# For a production system that needs persistence, you'd add an AOF/RDB volume.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis
+  namespace: swiftpay
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis
+  template:
+    metadata:
+      labels:
+        app: redis
+    spec:
+      containers:
+        - name: redis
+          image: redis:7-alpine
+          ports:
+            - containerPort: 6379
+          # redis-cli ping returns PONG when ready — simple and reliable.
+          readinessProbe:
+            exec:
+              command: ["redis-cli", "ping"]
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            exec:
+              command: ["redis-cli", "ping"]
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "32Mi"
+            limits:
+              cpu: "200m"
+              memory: "128Mi"

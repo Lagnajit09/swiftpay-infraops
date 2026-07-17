@@ -1,0 +1,10 @@
+# A Namespace is a virtual cluster inside your cluster — a logical box that
+# groups all SwiftPay resources together and keeps them isolated from other
+# workloads (like anything else you might run in the same cluster).
+#
+# Everything we create from here on lives in the "swiftpay" namespace, so we
+# never accidentally touch kube-system or default.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: swiftpay

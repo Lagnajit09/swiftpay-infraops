@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: payment-service-config
+  namespace: swiftpay
+data:
+  NODE_ENV: "production"
+  PORT: "5004"
+  FRONTEND_URL: "http://localhost:3000"
