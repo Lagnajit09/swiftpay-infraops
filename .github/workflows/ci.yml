@@ -46,22 +46,23 @@ jobs:
         uses: azure/setup-kubectl@v4
 
       - name: Dry-run apply all manifests
-        # --dry-run=client validates YAML structure and field names locally
-        # without connecting to a real cluster.
-        # We apply in order: namespace first, then everything else.
+        # --dry-run=client parses and validates YAML locally.
+        # --validate=false skips downloading the OpenAPI schema from a cluster
+        # (there is no cluster in CI). YAML structure and field presence are
+        # still checked; only deep field-type validation is skipped.
         run: |
-          kubectl apply -f k8s/namespace.yaml --dry-run=client
-          kubectl apply -f k8s/configmaps/ --dry-run=client
+          kubectl apply -f k8s/namespace.yaml --dry-run=client --validate=false
+          kubectl apply -f k8s/configmaps/ --dry-run=client --validate=false
           # k8s/secrets/ is gitignored (never commit real credentials)
           # Secret manifests are applied manually or via a secrets manager in production
-          kubectl apply -f k8s/infrastructure/postgres/ --dry-run=client
-          kubectl apply -f k8s/infrastructure/redis/ --dry-run=client
-          kubectl apply -f k8s/services/main-service/ --dry-run=client
-          kubectl apply -f k8s/services/auth-service/ --dry-run=client
-          kubectl apply -f k8s/services/wallet-service/ --dry-run=client
-          kubectl apply -f k8s/services/transaction-service/ --dry-run=client
-          kubectl apply -f k8s/services/payment-service/ --dry-run=client
-          kubectl apply -f k8s/ingress/ --dry-run=client
+          kubectl apply -f k8s/infrastructure/postgres/ --dry-run=client --validate=false
+          kubectl apply -f k8s/infrastructure/redis/ --dry-run=client --validate=false
+          kubectl apply -f k8s/services/main-service/ --dry-run=client --validate=false
+          kubectl apply -f k8s/services/auth-service/ --dry-run=client --validate=false
+          kubectl apply -f k8s/services/wallet-service/ --dry-run=client --validate=false
+          kubectl apply -f k8s/services/transaction-service/ --dry-run=client --validate=false
+          kubectl apply -f k8s/services/payment-service/ --dry-run=client --validate=false
+          kubectl apply -f k8s/ingress/ --dry-run=client --validate=false
 
   # ─────────────────────────────────────────────
   # JOB 2: Build and push Docker images to GHCR
