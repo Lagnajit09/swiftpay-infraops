@@ -32,6 +32,83 @@ patches:
     target:
       kind: ConfigMap
       name: auth-service-config
+  # imagePullPolicy: Always on every container — so the mutable :latest tag
+  # is actually re-pulled from GHCR on each rollout. Base uses IfNotPresent
+  # (correct for local k3d side-loaded images), but with IfNotPresent+:latest
+  # the kubelet keeps a stale cached image and never picks up new builds.
+  # Inline patches: kustomize auto-targets each by its kind+metadata.name.
+  - patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: main-service
+        namespace: swiftpay
+      spec:
+        template:
+          spec:
+            containers:
+              - name: main-service
+                imagePullPolicy: Always
+  - patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: auth-service
+        namespace: swiftpay
+      spec:
+        template:
+          spec:
+            initContainers:
+              - name: migrate
+                imagePullPolicy: Always
+            containers:
+              - name: auth-service
+                imagePullPolicy: Always
+  - patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: wallet-service
+        namespace: swiftpay
+      spec:
+        template:
+          spec:
+            initContainers:
+              - name: migrate
+                imagePullPolicy: Always
+            containers:
+              - name: wallet-service
+                imagePullPolicy: Always
+  - patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: transaction-service
+        namespace: swiftpay
+      spec:
+        template:
+          spec:
+            initContainers:
+              - name: migrate
+                imagePullPolicy: Always
+            containers:
+              - name: transaction-service
+                imagePullPolicy: Always
+  - patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: payment-service
+        namespace: swiftpay
+      spec:
+        template:
+          spec:
+            initContainers:
+              - name: migrate
+                imagePullPolicy: Always
+            containers:
+              - name: payment-service
+                imagePullPolicy: Always
 
 # Remap local image names to the GHCR images produced by CI.
 # newName/newTag replace the image reference wherever the original
