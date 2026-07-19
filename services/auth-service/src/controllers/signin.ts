@@ -215,11 +215,16 @@ export const signin = async (req: Request, res: Response) => {
     //  Store in Redis with TTL (2592000 seconds = 30 days)
     await redisClient.set(sessionId, token, { EX: 2592000 });
 
-    //  Set secure HTTP-only cookie
+    //  Set secure HTTP-only cookie.
+    //  The frontend (swiftpayz.web.app) and backend (…duckdns.org) are on
+    //  different sites in prod, so the session cookie must be
+    //  SameSite=None; Secure or the browser won't store/send it cross-site.
+    //  Locally (http, same-ish origin) we use "lax" since None requires Secure.
+    const isProd = process.env.NODE_ENV === "production";
     res.cookie("sessionId", sessionId, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
+      secure: isProd,
+      sameSite: isProd ? "none" : "lax",
       maxAge: 30 * 24 * 60 * 60 * 1000,
       path: "/",
     });

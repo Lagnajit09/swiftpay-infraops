@@ -27,6 +27,11 @@ patches:
     target:
       kind: ConfigMap
       name: main-service-config
+  # ConfigMap: auth-service FRONTEND_URL → Firebase app (email links)
+  - path: auth-configmap-patch.yaml
+    target:
+      kind: ConfigMap
+      name: auth-service-config
 
 # Remap local image names to the GHCR images produced by CI.
 # newName/newTag replace the image reference wherever the original

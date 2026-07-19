@@ -77,11 +77,13 @@ export const signout = async (req: Request, res: Response) => {
         }),
     ]);
 
-    // Clear the HTTP-only cookie
+    // Clear the HTTP-only cookie. Attributes MUST match how it was set in
+    // signin (SameSite/Secure), otherwise the browser won't clear it.
+    const isProd = process.env.NODE_ENV === "production";
     res.clearCookie("sessionId", {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
+      secure: isProd,
+      sameSite: isProd ? "none" : "lax",
       path: "/",
     });
 
@@ -116,11 +118,12 @@ export const signout = async (req: Request, res: Response) => {
   } catch (error: any) {
     await logInternalError("Signout error", error, req);
 
-    // Still clear the cookie even if there's an error
+    // Still clear the cookie even if there's an error. Match set attributes.
+    const isProd = process.env.NODE_ENV === "production";
     res.clearCookie("sessionId", {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
+      secure: isProd,
+      sameSite: isProd ? "none" : "lax",
       path: "/",
     });
 

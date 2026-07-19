@@ -1,0 +1,17 @@
+# PROD ConfigMap patch — override auth-service FRONTEND_URL.
+#
+# auth-service builds the email verification and password-reset links as
+# `${FRONTEND_URL}/verify-email?token=...` (see
+# services/auth-service/src/controllers/signup.ts, emailVerification.ts,
+# resetPassword.ts). The base auth-service-config sets FRONTEND_URL to
+# http://localhost:3000 (dev), which is why emails pointed at localhost.
+#
+# In prod the user-facing app is the Firebase Hosting site, so the links
+# must point there.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: auth-service-config
+  namespace: swiftpay
+data:
+  FRONTEND_URL: "https://swiftpayz.web.app"
