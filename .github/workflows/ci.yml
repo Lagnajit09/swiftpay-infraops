@@ -205,3 +205,59 @@ jobs:
             kubectl rollout restart deployment -n swiftpay
             # Wait for the rollout so a failed deploy fails the pipeline.
             kubectl rollout status deployment/main-service -n swiftpay --timeout=180s
+
+  # ─────────────────────────────────────────────
+  # JOB 4: Deploy the React frontend to Firebase Hosting
+  # Independent of the backend deploy. Runs only on push to main and only
+  # when the client/ dir changed. Builds the Vite bundle and deploys it to
+  # the "swiftpayz" Firebase project via a service account.
+  # ─────────────────────────────────────────────
+  deploy-frontend:
+    name: Deploy Frontend to Firebase
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Only build+deploy when the client actually changed on this push.
+      - name: Detect client changes
+        id: changes
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            client:
+              - 'client/**'
+
+      - name: Set up Node
+        if: steps.changes.outputs.client == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+
+      - name: Install dependencies
+        if: steps.changes.outputs.client == 'true'
+        working-directory: client
+        run: npm ci
+
+      - name: Build production bundle
+        if: steps.changes.outputs.client == 'true'
+        working-directory: client
+        # .env.production is NOT committed, so inject the live backend URL
+        # here. Vite reads VITE_* vars from the environment at build time.
+        env:
+          VITE_API_BASE_URL: https://swiftpay-api.duckdns.org:8443
+        run: npm run build
+
+      - name: Deploy to Firebase Hosting
+        if: steps.changes.outputs.client == 'true'
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          channelId: live
+          projectId: swiftpayz
+          entryPoint: client
