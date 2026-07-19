@@ -179,7 +179,10 @@ export async function debit(req: Request, res: Response) {
       );
 
       return validationErrorResponse(res, "Invalid debit operation", [
-        { field: "operation", message: "Database constraint violation" },
+        {
+          field: "operation",
+          message: `Database constraint violation (${error.code})`,
+        },
       ]);
     }
 

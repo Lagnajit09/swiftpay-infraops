@@ -166,7 +166,10 @@ export async function credit(req: Request, res: Response) {
       );
 
       return validationErrorResponse(res, "Invalid credit operation", [
-        { field: "operation", message: "Database constraint violation" },
+        {
+          field: "operation",
+          message: `Database constraint violation (${error.code})`,
+        },
       ]);
     }
 

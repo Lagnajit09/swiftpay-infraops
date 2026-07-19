@@ -289,7 +289,10 @@ export async function p2pTxn(req: Request, res: Response) {
       );
 
       return validationErrorResponse(res, "Invalid P2P operation", [
-        { field: "operation", message: "Database constraint violation" },
+        {
+          field: "operation",
+          message: `Database constraint violation (${error.code})`,
+        },
       ]);
     }
 

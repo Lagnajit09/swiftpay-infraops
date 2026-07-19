@@ -77,7 +77,10 @@ export async function handleTransactionError(
     }
 
     return validationErrorResponse(res, "Invalid transaction operation", [
-      { field: "operation", message: "Database constraint violation" },
+      {
+        field: "operation",
+        message: `Database constraint violation (${error.code})`,
+      },
     ]);
   }
 
