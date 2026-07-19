@@ -42,6 +42,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Install kubectl (for kustomize build)
+        uses: azure/setup-kubectl@v4
+
       - name: Install kubeconform
         # kubeconform validates manifests against the Kubernetes OpenAPI schemas
         # entirely offline — no cluster connection needed.
@@ -50,22 +53,17 @@ jobs:
             | tar -xz kubeconform
           sudo mv kubeconform /usr/local/bin/
 
-      - name: Validate all manifests
-        # -ignore-missing-schemas: skip CRDs we don't have schemas for (e.g. Ingress from nginx)
-        # -summary: print a summary line at the end
-        # k8s/secrets/ is gitignored — never commit credentials, even placeholders
+      - name: Render overlays and validate
+        # Build each Kustomize target and pipe the rendered manifests to
+        # kubeconform. This validates EXACTLY what gets deployed (post-patch),
+        # not the raw files. The postgres secret is applied out-of-band and
+        # gitignored, so it's absent from the render — expected.
+        # -ignore-missing-schemas skips CRDs we don't ship schemas for.
         run: |
-          kubeconform -ignore-missing-schemas -summary \
-            k8s/namespace.yaml \
-            k8s/configmaps/ \
-            k8s/infrastructure/postgres/ \
-            k8s/infrastructure/redis/ \
-            k8s/services/main-service/ \
-            k8s/services/auth-service/ \
-            k8s/services/wallet-service/ \
-            k8s/services/transaction-service/ \
-            k8s/services/payment-service/ \
-            k8s/ingress/
+          echo "== base =="
+          kubectl kustomize k8s/base | kubeconform -ignore-missing-schemas -summary
+          echo "== overlays/prod =="
+          kubectl kustomize k8s/overlays/prod | kubeconform -ignore-missing-schemas -summary
 
   # ─────────────────────────────────────────────
   # JOB 2: Build and push Docker images to GHCR
