@@ -72,7 +72,11 @@ jobs:
   # ─────────────────────────────────────────────
   build-and-push:
     name: Build & Push — ${{ matrix.service }}
-    runs-on: ubuntu-latest
+    # Native ARM64 runner — builds arm64 images without QEMU emulation.
+    # Our only deploy target is the Oracle A1 (aarch64), so we build
+    # arm64-only. Native build = no "qemu illegal instruction" crashes
+    # and much faster than emulation.
+    runs-on: ubuntu-24.04-arm
     # Skip this job on pull requests — only push to registry from main
     if: github.event_name == 'push'
 
@@ -119,10 +123,7 @@ jobs:
             type=sha,prefix=sha-,format=short
             type=raw,value=latest
 
-      # QEMU enables cross-architecture builds. The GitHub runner is amd64;
-      # QEMU emulates arm64 so we can build for the Oracle A1 (aarch64) box.
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
+      # No QEMU needed — the runner is natively arm64.
 
       # BuildKit cache speeds up repeated builds significantly.
       # gha (GitHub Actions cache) stores layer cache between runs.
@@ -135,10 +136,9 @@ jobs:
           context: ${{ matrix.context }}
           target: production
           push: true
-          # Multi-arch: amd64 for most clouds + arm64 for the Oracle A1
-          # Ampere (aarch64) box. Without arm64 the A1 gets "no match for
-          # platform in manifest" on pull.
-          platforms: linux/amd64,linux/arm64
+          # arm64-only: the Oracle A1 Ampere box is our sole deploy target.
+          # Built natively on an arm64 runner (no emulation).
+          platforms: linux/arm64
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha,scope=${{ matrix.service }}
