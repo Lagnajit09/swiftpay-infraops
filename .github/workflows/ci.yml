@@ -121,6 +121,11 @@ jobs:
             type=sha,prefix=sha-,format=short
             type=raw,value=latest
 
+      # QEMU enables cross-architecture builds. The GitHub runner is amd64;
+      # QEMU emulates arm64 so we can build for the Oracle A1 (aarch64) box.
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
       # BuildKit cache speeds up repeated builds significantly.
       # gha (GitHub Actions cache) stores layer cache between runs.
       - name: Set up Docker Buildx
@@ -132,6 +137,10 @@ jobs:
           context: ${{ matrix.context }}
           target: production
           push: true
+          # Multi-arch: amd64 for most clouds + arm64 for the Oracle A1
+          # Ampere (aarch64) box. Without arm64 the A1 gets "no match for
+          # platform in manifest" on pull.
+          platforms: linux/amd64,linux/arm64
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha,scope=${{ matrix.service }}
