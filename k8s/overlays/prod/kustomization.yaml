@@ -1,0 +1,49 @@
+# PROD Overlay — patches the base for the Oracle A1 k3s cluster.
+#
+# What this changes vs base:
+#   1. Image names: swiftpay-*:local  →  ghcr.io/lagnajit09/swiftpay-*:latest
+#      The `images:` transformer rewrites EVERY occurrence of each image
+#      name across all deployments AND init containers automatically.
+#   2. imagePullPolicy is handled by the image tag: with a real registry
+#      image, k3s pulls it. We keep :latest and rollout-restart on deploy
+#      to pick up new builds.
+#
+# Apply with:  kubectl apply -k k8s/overlays/prod
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../../base
+
+# Strategic-merge patches for prod-specific overrides.
+patches:
+  # Ingress: Traefik class + TLS + swiftpay-api.duckdns.org host
+  - path: ingress-patch.yaml
+    target:
+      kind: Ingress
+      name: swiftpay-ingress
+  # ConfigMap: CORS FRONTEND_URL → Firebase Hosting app
+  - path: configmap-patch.yaml
+    target:
+      kind: ConfigMap
+      name: main-service-config
+
+# Remap local image names to the GHCR images produced by CI.
+# newName/newTag replace the image reference wherever the original
+# `name` appears (main container + init container alike).
+images:
+  - name: swiftpay-main
+    newName: ghcr.io/lagnajit09/swiftpay-main-service
+    newTag: latest
+  - name: swiftpay-auth
+    newName: ghcr.io/lagnajit09/swiftpay-auth-service
+    newTag: latest
+  - name: swiftpay-wallet
+    newName: ghcr.io/lagnajit09/swiftpay-wallet-service
+    newTag: latest
+  - name: swiftpay-transaction
+    newName: ghcr.io/lagnajit09/swiftpay-transaction-service
+    newTag: latest
+  - name: swiftpay-payment
+    newName: ghcr.io/lagnajit09/swiftpay-payment-service
+    newTag: latest

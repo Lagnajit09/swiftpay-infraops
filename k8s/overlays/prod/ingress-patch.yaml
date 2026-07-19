@@ -1,0 +1,42 @@
+# PROD ingress patch — overrides the base ingress for Oracle k3s.
+#
+# Differences from base (local k3d / NGINX):
+#   • ingressClassName: traefik  — k3s ships Traefik, not NGINX
+#   • host: swiftpay-api.duckdns.org — route only this domain
+#   • TLS block — Traefik serves HTTPS using the cert stored in
+#     the "swiftpay-tls" secret, which cert-manager creates/renews
+#     via the DuckDNS DNS-01 challenge.
+#   • cert-manager.io/cluster-issuer annotation — tells cert-manager
+#     to issue a cert for this ingress's hosts automatically.
+#
+# This is a strategic-merge patch: it merges onto the base ingress by
+# name (swiftpay-ingress). Fields not mentioned here (the /api path rule)
+# are inherited from base unchanged.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: swiftpay-ingress
+  namespace: swiftpay
+  annotations:
+    # Remove the NGINX-specific annotation from base by setting Traefik's.
+    kubernetes.io/ingress.class: "traefik"
+    cert-manager.io/cluster-issuer: "letsencrypt-duckdns"
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - swiftpay-api.duckdns.org
+      secretName: swiftpay-tls
+  rules:
+    # Re-declare the rule WITH the host so Traefik scopes routing to
+    # our domain. The path/backend match base so routing is unchanged.
+    - host: swiftpay-api.duckdns.org
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: main-service
+                port:
+                  number: 5000

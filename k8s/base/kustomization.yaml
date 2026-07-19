@@ -1,0 +1,50 @@
+# BASE Kustomization — the full SwiftPay stack, environment-agnostic.
+#
+# Lives at k8s/base/ with every referenced manifest below it — Kustomize
+# forbids referencing files outside a kustomization's own directory tree.
+# overlays/prod is a sibling that references ../../base.
+#
+# Uses LOCAL image names (swiftpay-*:local) as written in the deployment
+# files. Overlays (overlays/prod) patch these to real registry images.
+# Applying this base alone still works for local k3d:
+#     kubectl apply -k k8s/base
+#
+# Secrets are intentionally NOT listed here — k8s/secrets/ is gitignored
+# and applied separately so credentials never enter git or the build.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - namespace.yaml
+
+  # ConfigMaps (non-sensitive env vars)
+  - configmaps/main-service.yaml
+  - configmaps/auth-service.yaml
+  - configmaps/wallet-service.yaml
+  - configmaps/transaction-service.yaml
+  - configmaps/payment-service.yaml
+
+  # Infrastructure
+  # postgres-secret is NOT listed here — it's created manually on each
+  # cluster (like the app service secrets) so the password never enters git.
+  # See k8s/base/infrastructure/postgres/secret.example.yaml for the shape.
+  - infrastructure/postgres/pvc.yaml
+  - infrastructure/postgres/statefulset.yaml
+  - infrastructure/postgres/service.yaml
+  - infrastructure/redis/deployment.yaml
+  - infrastructure/redis/service.yaml
+
+  # Application services (deployment + service each)
+  - services/main-service/deployment.yaml
+  - services/main-service/service.yaml
+  - services/auth-service/deployment.yaml
+  - services/auth-service/service.yaml
+  - services/wallet-service/deployment.yaml
+  - services/wallet-service/service.yaml
+  - services/transaction-service/deployment.yaml
+  - services/transaction-service/service.yaml
+  - services/payment-service/deployment.yaml
+  - services/payment-service/service.yaml
+
+  # Ingress
+  - ingress/ingress.yaml

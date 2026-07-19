@@ -2,3 +2,14 @@
 .graphifyignore
 graphify-out/
 k8s/secrets
+
+# Never commit environment files with real credentials
+.env
+.env.*
+!.env.example
+
+# Generated cluster-ready env files (contain real credentials)
+cluster-env/
+
+# Real postgres secret (has the DB password) — commit only secret.example.yaml
+k8s/base/infrastructure/postgres/secret.yaml

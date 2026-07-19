@@ -1,0 +1,15 @@
+# PROD ConfigMap patch — override CORS origin for the deployed backend.
+#
+# The base main-service-config sets FRONTEND_URL=http://localhost:3000
+# (correct for local dev). In prod, the browser-facing frontend is the
+# Firebase Hosting app, so CORS must allow that origin instead.
+#
+# main-service is the BFF the browser talks to; its FRONTEND_URL drives
+# the cors() origin check (see services/main/src/index.ts).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: main-service-config
+  namespace: swiftpay
+data:
+  FRONTEND_URL: "https://swiftpayz.web.app"
