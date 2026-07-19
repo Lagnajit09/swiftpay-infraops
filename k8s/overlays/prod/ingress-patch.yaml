@@ -20,7 +20,10 @@ metadata:
   annotations:
     # Remove the NGINX-specific annotation from base by setting Traefik's.
     kubernetes.io/ingress.class: "traefik"
-    cert-manager.io/cluster-issuer: "letsencrypt-duckdns"
+    # ClusterIssuer auto-created by the cert-manager-webhook-duckdns Helm
+    # chart (clusterIssuer.production.create=true). cert-manager sees this
+    # annotation and issues/renews a Let's Encrypt cert via DuckDNS DNS-01.
+    cert-manager.io/cluster-issuer: "cert-manager-webhook-duckdns-production"
 spec:
   ingressClassName: traefik
   tls:
